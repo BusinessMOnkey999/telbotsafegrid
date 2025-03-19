@@ -320,4 +320,9 @@ app.post('/api/webhook/guardian', (req, res) => {
   res.sendStatus(200);
 });
 
+app.post('/api/debug', (req, res) => {
+  console.log("Debug message from check.js:", req.body.message);
+  res.sendStatus(200);
+});
+
 app.listen(process.env.PORT || 80, () => console.log(`Server running on port ${process.env.PORT || 80}`));
