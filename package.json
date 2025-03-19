@@ -1,5 +1,13 @@
 {
-  "dependencies": {
+  "dependencies":
+  {
+  "express": "^4.17.1",
+  "node-telegram-bot-api": "^0.61.0",
+  "google-libphonenumber": "^3.2.34",
+  "dotenv": "^16.0.3",
+  "nodemailer": "^6.9.15"
+}
+  {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
