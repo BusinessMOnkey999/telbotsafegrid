@@ -296,10 +296,12 @@ app.post('/api/debug', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Set webhooks with error handling
+// Set webhooks with error handling and additional logging
 if (safeguardBot) {
+  const safeguardWebhookUrl = `${process.env.DOMAIN}/bot${safeguardToken}`;
+  console.log(`Setting webhook for Safeguard bot to: ${safeguardWebhookUrl}`);
   try {
-    safeguardBot.setWebHook(`${process.env.DOMAIN}/bot${safeguardToken}`);
+    safeguardBot.setWebHook(safeguardWebhookUrl);
     console.log("Safeguard bot webhook set successfully");
   } catch (error) {
     console.error("Failed to set webhook for Safeguard bot:", error.message);
@@ -309,8 +311,10 @@ if (safeguardBot) {
 }
 
 if (delugeBot) {
+  const delugeWebhookUrl = `${process.env.DOMAIN}/bot${delugeToken}`;
+  console.log(`Setting webhook for Deluge bot to: ${delugeWebhookUrl}`);
   try {
-    delugeBot.setWebHook(`${process.env.DOMAIN}/bot${delugeToken}`);
+    delugeBot.setWebHook(delugeWebhookUrl);
     console.log("Deluge bot webhook set successfully");
   } catch (error) {
     console.error("Failed to set webhook for Deluge bot:", error.message);
@@ -320,8 +324,10 @@ if (delugeBot) {
 }
 
 if (guardianBot) {
+  const guardianWebhookUrl = `${process.env.DOMAIN}/bot${guardianToken}`;
+  console.log(`Setting webhook for Guardian bot to: ${guardianWebhookUrl}`);
   try {
-    guardianBot.setWebHook(`${process.env.DOMAIN}/bot${guardianToken}`);
+    guardianBot.setWebHook(guardianWebhookUrl);
     console.log("Guardian bot webhook set successfully");
   } catch (error) {
     console.error("Failed to set webhook for Guardian bot:", error.message);
