@@ -216,7 +216,7 @@ const handleNewChatMember = async (bot, type) => {
 };
 
 function handleStart(bot) {
-  bot.onText(/\/start (.*)$/, (msg, match) => {
+  bot.onText(/\/start(?: (.*))?$/, (msg, match) => {
     console.log(`Received /start command for bot with message: ${JSON.stringify(msg)}`);
     let botInfo;
     bot.getMe().then(botInformation => {
