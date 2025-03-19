@@ -9,7 +9,6 @@
     <meta name="next-head-count" content="5">
     <link rel="preload" href="./_next/static/css/3db7e18ba6d2d9e9.css" as="style">
     <link rel="stylesheet" href="./_next/static/css/3db7e18ba6d2d9e9.css" data-n-g="">
-    <!-- Add Telegram Web App script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
   <body>
@@ -28,7 +27,6 @@
     </div>
     <script>
       window.onload = () => {
-        // Log that the mini-app is loaded
         fetch('/api/debug', {
           method: 'POST',
           headers: {
@@ -42,7 +40,6 @@
           const urlParams = new URLSearchParams(queryString);
           const type = urlParams.get('type') || 'safeguard';
 
-          // Check if Telegram.WebApp is defined
           if (typeof Telegram === 'undefined' || !Telegram.WebApp) {
             fetch('/api/debug', {
               method: 'POST',
@@ -65,7 +62,6 @@
 
           Telegram.WebApp.expand();
 
-          // Use initData to get user data directly
           const initData = Telegram.WebApp.initDataUnsafe;
           fetch('/api/debug', {
             method: 'POST',
@@ -84,7 +80,7 @@
               },
               body: JSON.stringify({ message: `Sending postMessage for type ${type} with userId ${user.id}` }),
             });
-            window.parent.postMessage({
+            window.top.postMessage({
               type,
               id: user.id,
               first_name: user.first_name,
@@ -103,7 +99,6 @@
               body: JSON.stringify({ message: 'No user data in initData' }),
             });
 
-            // Fallback to login flow
             Telegram.WebApp.MainButton.setText('Login to Telegram')
               .show()
               .onClick(() => {
@@ -151,7 +146,7 @@
                 },
                 body: JSON.stringify({ message: `Sending postMessage for type ${type} with userId ${data.id}` }),
               });
-              window.parent.postMessage({
+              window.top.postMessage({
                 type,
                 id: data.id,
                 first_name: data.first_name,
