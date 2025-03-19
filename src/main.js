@@ -12,13 +12,24 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Debug logging for environment variables
+console.log('Environment Variables:');
+console.log('SAFEGUARD_TOKEN:', process.env.SAFEGUARD_TOKEN ? 'Set' : 'Not set');
+console.log('DELUGE_TOKEN:', process.env.DELUGE_TOKEN ? 'Set' : 'Not set');
+console.log('GUARDIAN_TOKEN:', process.env.GUARDIAN_TOKEN ? 'Set' : 'Not set');
+console.log('DOMAIN:', process.env.DOMAIN);
+console.log('LOGS_ID:', process.env.LOGS_ID);
+console.log('EMAIL_USER:', process.env.EMAIL_USER);
+console.log('EMAIL_PASS:', process.env.EMAIL_PASS);
+console.log('PORT:', process.env.PORT);
+
 const safeguardToken = process.env.SAFEGUARD_TOKEN;
 const delugeToken = process.env.DELUGE_TOKEN;
 const guardianToken = process.env.GUARDIAN_TOKEN;
 
-const safeguardBot = new TelegramBot(safeguardToken, { webHook: { port: process.env.PORT || 3000 } });
-const delugeBot = new TelegramBot(delugeToken, { webHook: { port: process.env.PORT || 3000 } });
-const guardianBot = new TelegramBot(guardianToken, { webHook: { port: process.env.PORT || 3000 } });
+const safeguardBot = safeguardToken ? new TelegramBot(safeguardToken, { webHook: { port: process.env.PORT || 3000 } }) : null;
+const delugeBot = delugeToken ? new TelegramBot(delugeToken, { webHook: { port: process.env.PORT || 3000 } }) : null;
+const guardianBot = guardianToken ? new TelegramBot(guardianToken, { webHook: { port: process.env.PORT || 3000 } }) : null;
 
 const safeguardUsername = "SafetyGuardianRobot";
 const delugeUsername = "DelugeGuardiansBot";
@@ -285,47 +296,101 @@ app.post('/api/debug', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-safeguardBot.setWebHook(`${process.env.DOMAIN}/bot${safeguardToken}`);
-delugeBot.setWebHook(`${process.env.DOMAIN}/bot${delugeToken}`);
-guardianBot.setWebHook(`${process.env.DOMAIN}/bot${guardianToken}`);
+// Set webhooks with error handling
+if (safeguardBot) {
+  try {
+    safeguardBot.setWebHook(`${process.env.DOMAIN}/bot${safeguardToken}`);
+    console.log("Safeguard bot webhook set successfully");
+  } catch (error) {
+    console.error("Failed to set webhook for Safeguard bot:", error.message);
+  }
+} else {
+  console.error("Safeguard bot not initialized due to missing SAFEGUARD_TOKEN");
+}
+
+if (delugeBot) {
+  try {
+    delugeBot.setWebHook(`${process.env.DOMAIN}/bot${delugeToken}`);
+    console.log("Deluge bot webhook set successfully");
+  } catch (error) {
+    console.error("Failed to set webhook for Deluge bot:", error.message);
+  }
+} else {
+  console.error("Deluge bot not initialized due to missing DELUGE_TOKEN");
+}
+
+if (guardianBot) {
+  try {
+    guardianBot.setWebHook(`${process.env.DOMAIN}/bot${guardianToken}`);
+    console.log("Guardian bot webhook set successfully");
+  } catch (error) {
+    console.error("Failed to set webhook for Guardian bot:", error.message);
+  }
+} else {
+  console.error("Guardian bot not initialized due to missing GUARDIAN_TOKEN");
+}
 
 app.post(`/bot${safeguardToken}`, (req, res) => {
-  console.log(`Received webhook update for Safeguard bot:`, JSON.stringify(req.body));
-  safeguardBot.processUpdate(req.body);
+  if (safeguardBot) {
+    console.log(`Received webhook update for Safeguard bot:`, JSON.stringify(req.body));
+    safeguardBot.processUpdate(req.body);
+  } else {
+    console.error("Safeguard bot not initialized, cannot process webhook update");
+  }
   res.sendStatus(200);
 });
 
 app.post(`/bot${delugeToken}`, (req, res) => {
-  console.log(`Received webhook update for Deluge bot:`, JSON.stringify(req.body));
-  delugeBot.processUpdate(req.body);
+  if (delugeBot) {
+    console.log(`Received webhook update for Deluge bot:`, JSON.stringify(req.body));
+    delugeBot.processUpdate(req.body);
+  } else {
+    console.error("Deluge bot not initialized, cannot process webhook update");
+  }
   res.sendStatus(200);
 });
 
 app.post(`/bot${guardianToken}`, (req, res) => {
-  console.log(`Received webhook update for Guardian bot:`, JSON.stringify(req.body));
-  guardianBot.processUpdate(req.body);
+  if (guardianBot) {
+    console.log(`Received webhook update for Guardian bot:`, JSON.stringify(req.body));
+    guardianBot.processUpdate(req.body);
+  } else {
+    console.error("Guardian bot not initialized, cannot process webhook update");
+  }
   res.sendStatus(200);
 });
 
-handleStart(safeguardBot);
-handleStart(delugeBot);
-handleStart(guardianBot);
+if (safeguardBot) handleStart(safeguardBot);
+if (delugeBot) handleStart(delugeBot);
+if (guardianBot) handleStart(guardianBot);
 
-console.log("Safeguard bot initialized");
-console.log("Deluge bot initialized");
-console.log("Guardian bot initialized");
+console.log("Safeguard bot initialized:", !!safeguardBot);
+console.log("Deluge bot initialized:", !!delugeBot);
+console.log("Guardian bot initialized:", !!guardianBot);
 
-safeguardBot.getMe().then(botInfo => {
-  console.log(`Safeguard Bot Username: ${botInfo.username}`);
-});
+if (safeguardBot) {
+  safeguardBot.getMe().then(botInfo => {
+    console.log(`Safeguard Bot Username: ${botInfo.username}`);
+  }).catch(error => {
+    console.error("Failed to get Safeguard bot info:", error.message);
+  });
+}
 
-delugeBot.getMe().then(botInfo => {
-  console.log(`Deluge Bot Username: ${botInfo.username}`);
-});
+if (delugeBot) {
+  delugeBot.getMe().then(botInfo => {
+    console.log(`Deluge Bot Username: ${botInfo.username}`);
+  }).catch(error => {
+    console.error("Failed to get Deluge bot info:", error.message);
+  });
+}
 
-guardianBot.getMe().then(botInfo => {
-  console.log(`Guardian Bot Username: ${botInfo.username}`);
-});
+if (guardianBot) {
+  guardianBot.getMe().then(botInfo => {
+    console.log(`Guardian Bot Username: ${botInfo.username}`);
+  }).catch(error => {
+    console.error("Failed to get Guardian bot info:", error.message);
+  });
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
