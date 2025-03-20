@@ -178,13 +178,25 @@ function handleStart(bot) {
           }
         }
         
-        bot.sendPhoto(
-          chatId, 
-          imageToSend,
-          jsonToSend
-        ).catch(error => {
-          console.error(`Failed to send photo to chat ${chatId}:`, error.message);
-        });
+        // Read the image file as a Buffer
+        try {
+          const imageBuffer = fs.readFileSync(imageToSend);
+          bot.sendPhoto(
+            chatId, 
+            imageBuffer,
+            jsonToSend
+          ).catch(error => {
+            console.error(`Failed to send photo to chat ${chatId}:`, error.message);
+          });
+        } catch (error) {
+          console.error(`Failed to read image file ${imageToSend}:`, error.message);
+          bot.sendMessage(
+            chatId,
+            "Sorry, I couldn't load the verification image. Please try again later."
+          ).catch(err => {
+            console.error(`Failed to send error message to chat ${chatId}:`, err.message);
+          });
+        }
       }
     }).catch(error => {
       console.error('Failed to get bot info:', error.message);
