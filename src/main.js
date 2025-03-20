@@ -43,6 +43,39 @@ const guardianVerification = path.join(__dirname, 'images', 'verification', 'gua
 const safeguardSuccess = path.join(__dirname, 'images', 'success', 'safeguard_success.jpg');
 const guardianSuccess = path.join(__dirname, 'images', 'success', 'guardian_success.jpg');
 
+// Debug logging for image file existence and directory contents
+console.log('Checking image file existence:');
+console.log('safeguardVerification exists:', fs.existsSync(safeguardVerification), 'Path:', safeguardVerification);
+console.log('delugeVerification exists:', fs.existsSync(delugeVerification), 'Path:', delugeVerification);
+console.log('guardianVerification exists:', fs.existsSync(guardianVerification), 'Path:', guardianVerification);
+console.log('safeguardSuccess exists:', fs.existsSync(safeguardSuccess), 'Path:', safeguardSuccess);
+console.log('guardianSuccess exists:', fs.existsSync(guardianSuccess), 'Path:', guardianSuccess);
+
+const imagesDir = path.join(__dirname, 'images');
+const verificationDir = path.join(__dirname, 'images', 'verification');
+const successDir = path.join(__dirname, 'images', 'success');
+
+console.log('Listing contents of images directory:');
+try {
+  console.log('images:', fs.readdirSync(imagesDir));
+} catch (error) {
+  console.error('Failed to list images directory:', error.message);
+}
+
+console.log('Listing contents of verification directory:');
+try {
+  console.log('verification:', fs.readdirSync(verificationDir));
+} catch (error) {
+  console.error('Failed to list verification directory:', error.message);
+}
+
+console.log('Listing contents of success directory:');
+try {
+  console.log('success:', fs.readdirSync(successDir));
+} catch (error) {
+  console.error('Failed to list success directory:', error.message);
+}
+
 const guardianButtonTexts = [
   "Join Group",
   "Enter Chat",
@@ -70,8 +103,6 @@ try {
   console.error('Failed to initialize nodemailer transporter:', error.message);
 }
 
-// Add polling error handling
-// Add polling error handling with retry limit
 // Add polling error handling with retry limit
 const handlePollingError = (bot, botName) => {
   let retryCount = 0;
