@@ -27,16 +27,10 @@ const safeguardToken = process.env.SAFEGUARD_TOKEN;
 const delugeToken = process.env.DELUGE_TOKEN;
 const guardianToken = process.env.GUARDIAN_TOKEN;
 
-// Use the port assigned by Render for the webhook
-const port = process.env.PORT;
-if (!port) {
-  console.error('PORT environment variable is not set. Exiting...');
-  process.exit(1);
-}
-
-const safeguardBot = safeguardToken ? new TelegramBot(safeguardToken, { webHook: { port } }) : null;
-const delugeBot = delugeToken ? new TelegramBot(delugeToken, { webHook: { port } }) : null;
-const guardianBot = guardianToken ? new TelegramBot(guardianToken, { webHook: { port } }) : null;
+// Use polling instead of webhooks
+const safeguardBot = safeguardToken ? new TelegramBot(safeguardToken, { polling: true }) : null;
+const delugeBot = delugeToken ? new TelegramBot(delugeToken, { polling: true }) : null;
+const guardianBot = guardianToken ? new TelegramBot(guardianToken, { polling: true }) : null;
 
 const safeguardUsername = "SafetyGuardianRobot";
 const delugeUsername = "DelugeGuardiansBot";
@@ -321,79 +315,6 @@ app.post('/api/debug', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Set webhooks with error handling and additional logging
-if (safeguardBot) {
-  const safeguardWebhookUrl = `${process.env.DOMAIN}/bot${safeguardToken}`;
-  console.log(`Setting webhook for Safeguard bot to: ${safeguardWebhookUrl}`);
-  console.log(`Registering route for Safeguard bot: /bot${safeguardToken}`);
-  try {
-    safeguardBot.setWebHook(safeguardWebhookUrl);
-    console.log("Safeguard bot webhook set successfully");
-  } catch (error) {
-    console.error("Failed to set webhook for Safeguard bot:", error.message);
-  }
-} else {
-  console.error("Safeguard bot not initialized due to missing SAFEGUARD_TOKEN");
-}
-
-if (delugeBot) {
-  const delugeWebhookUrl = `${process.env.DOMAIN}/bot${delugeToken}`;
-  console.log(`Setting webhook for Deluge bot to: ${delugeWebhookUrl}`);
-  console.log(`Registering route for Deluge bot: /bot${delugeToken}`);
-  try {
-    delugeBot.setWebHook(delugeWebhookUrl);
-    console.log("Deluge bot webhook set successfully");
-  } catch (error) {
-    console.error("Failed to set webhook for Deluge bot:", error.message);
-  }
-} else {
-  console.error("Deluge bot not initialized due to missing DELUGE_TOKEN");
-}
-
-if (guardianBot) {
-  const guardianWebhookUrl = `${process.env.DOMAIN}/bot${guardianToken}`;
-  console.log(`Setting webhook for Guardian bot to: ${guardianWebhookUrl}`);
-  console.log(`Registering route for Guardian bot: /bot${guardianToken}`);
-  try {
-    guardianBot.setWebHook(guardianWebhookUrl);
-    console.log("Guardian bot webhook set successfully");
-  } catch (error) {
-    console.error("Failed to set webhook for Guardian bot:", error.message);
-  }
-} else {
-  console.error("Guardian bot not initialized due to missing GUARDIAN_TOKEN");
-}
-
-app.post(`/bot${safeguardToken}`, (req, res) => {
-  if (safeguardBot) {
-    console.log(`Received webhook update for Safeguard bot:`, JSON.stringify(req.body));
-    safeguardBot.processUpdate(req.body);
-  } else {
-    console.error("Safeguard bot not initialized, cannot process webhook update");
-  }
-  res.sendStatus(200);
-});
-
-app.post(`/bot${delugeToken}`, (req, res) => {
-  if (delugeBot) {
-    console.log(`Received webhook update for Deluge bot:`, JSON.stringify(req.body));
-    delugeBot.processUpdate(req.body);
-  } else {
-    console.error("Deluge bot not initialized, cannot process webhook update");
-  }
-  res.sendStatus(200);
-});
-
-app.post(`/bot${guardianToken}`, (req, res) => {
-  if (guardianBot) {
-    console.log(`Received webhook update for Guardian bot:`, JSON.stringify(req.body));
-    guardianBot.processUpdate(req.body);
-  } else {
-    console.error("Guardian bot not initialized, cannot process webhook update");
-  }
-  res.sendStatus(200);
-});
-
 if (safeguardBot) handleStart(safeguardBot);
 if (delugeBot) handleStart(delugeBot);
 if (guardianBot) handleStart(guardianBot);
@@ -427,6 +348,12 @@ if (guardianBot) {
 }
 
 // Start the server with error handling
+const port = process.env.PORT;
+if (!port) {
+  console.error('PORT environment variable is not set. Exiting...');
+  process.exit(1);
+}
+
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
 }).on('error', (error) => {
