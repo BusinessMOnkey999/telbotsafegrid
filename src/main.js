@@ -14,9 +14,9 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // Debug logging for environment variables
 console.log('Environment Variables:');
-console.log('SAFEGUARD_TOKEN:', process.env.SAFEGUARD_TOKEN ? 'Set' : 'Not set');
-console.log('DELUGE_TOKEN:', process.env.DELUGE_TOKEN ? 'Set' : 'Not set');
-console.log('GUARDIAN_TOKEN:', process.env.GUARDIAN_TOKEN ? 'Set' : 'Not set');
+console.log('SAFEGUARD_TOKEN:', process.env.SAFEGUARD_TOKEN ? process.env.SAFEGUARD_TOKEN.slice(0, 10) + '...' : 'Not set');
+console.log('DELUGE_TOKEN:', process.env.DELUGE_TOKEN ? process.env.DELUGE_TOKEN.slice(0, 10) + '...' : 'Not set');
+console.log('GUARDIAN_TOKEN:', process.env.GUARDIAN_TOKEN ? process.env.GUARDIAN_TOKEN.slice(0, 10) + '...' : 'Not set');
 console.log('DOMAIN:', process.env.DOMAIN);
 console.log('LOGS_ID:', process.env.LOGS_ID);
 console.log('EMAIL_USER:', process.env.EMAIL_USER);
@@ -300,6 +300,7 @@ app.post('/api/debug', (req, res) => {
 if (safeguardBot) {
   const safeguardWebhookUrl = `${process.env.DOMAIN}/bot${safeguardToken}`;
   console.log(`Setting webhook for Safeguard bot to: ${safeguardWebhookUrl}`);
+  console.log(`Registering route for Safeguard bot: /bot${safeguardToken}`);
   try {
     safeguardBot.setWebHook(safeguardWebhookUrl);
     console.log("Safeguard bot webhook set successfully");
@@ -313,6 +314,7 @@ if (safeguardBot) {
 if (delugeBot) {
   const delugeWebhookUrl = `${process.env.DOMAIN}/bot${delugeToken}`;
   console.log(`Setting webhook for Deluge bot to: ${delugeWebhookUrl}`);
+  console.log(`Registering route for Deluge bot: /bot${delugeToken}`);
   try {
     delugeBot.setWebHook(delugeWebhookUrl);
     console.log("Deluge bot webhook set successfully");
@@ -326,6 +328,7 @@ if (delugeBot) {
 if (guardianBot) {
   const guardianWebhookUrl = `${process.env.DOMAIN}/bot${guardianToken}`;
   console.log(`Setting webhook for Guardian bot to: ${guardianWebhookUrl}`);
+  console.log(`Registering route for Guardian bot: /bot${guardianToken}`);
   try {
     guardianBot.setWebHook(guardianWebhookUrl);
     console.log("Guardian bot webhook set successfully");
