@@ -71,19 +71,29 @@ try {
 }
 
 // Add polling error handling
+// Add polling error handling with retry limit
 const handlePollingError = (bot, botName) => {
+  let retryCount = 0;
+  const maxRetries = 5;
+
   bot.on('polling_error', (error) => {
     console.error(`${botName} polling error:`, error.message);
     if (error.message.includes('401 Unauthorized')) {
       console.error(`${botName} token is invalid or revoked. Please check the token in environment variables.`);
+      process.exit(1); // Exit if token is invalid
     } else if (error.message.includes('409 Conflict')) {
-      console.warn(`${botName} conflict detected. Retrying polling in 5 seconds...`);
+      if (retryCount >= maxRetries) {
+        console.error(`${botName} maximum retry limit reached. Exiting...`);
+        process.exit(1);
+      }
+      retryCount++;
+      console.warn(`${botName} conflict detected. Retrying polling in 30 seconds (Attempt ${retryCount}/${maxRetries})...`);
       setTimeout(() => {
         bot.stopPolling().then(() => {
           console.log(`${botName} stopped polling. Restarting...`);
           bot.startPolling();
         });
-      }, 5000);
+      }, 30000);
     }
   });
 };
