@@ -36,12 +36,12 @@ const safeguardUsername = "SafetyGuardianRobot";
 const delugeUsername = "DelugeGuardiansBot";
 const guardianUsername = "GuardianSafetyrobot";
 
-const safeguardVerification = path.join(__dirname, 'images', 'safeguard_verification.jpg');
-const delugeVerification = path.join(__dirname, 'images', 'deluge_verification.jpg');
-const guardianVerification = path.join(__dirname, 'images', 'guardian_verification.jpg');
+const safeguardVerification = path.join(__dirname, 'images', 'verification', 'safeguard_verification.jpg');
+const delugeVerification = path.join(__dirname, 'images', 'verification', 'deluge_verification.jpg');
+const guardianVerification = path.join(__dirname, 'images', 'verification', 'guardian_verification.jpg');
 
-const safeguardSuccess = path.join(__dirname, 'images', 'safeguard_success.jpg');
-const guardianSuccess = path.join(__dirname, 'images', 'guardian_success.jpg');
+const safeguardSuccess = path.join(__dirname, 'images', 'success', 'safeguard_success.jpg');
+const guardianSuccess = path.join(__dirname, 'images', 'success', 'guardian_success.jpg');
 
 const guardianButtonTexts = [
   "Join Group",
