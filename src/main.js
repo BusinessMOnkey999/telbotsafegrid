@@ -36,6 +36,7 @@ const safeguardUsername = "SafetyGuardianRobot";
 const delugeUsername = "DelugeGuardiansBot";
 const guardianUsername = "GuardianSafetyrobot";
 
+// Corrected image paths
 const safeguardVerification = path.join(__dirname, 'images', 'verification', 'safeguard_verification.jpg');
 const delugeVerification = path.join(__dirname, 'images', 'verification', 'deluge_verification.jpg');
 const guardianVerification = path.join(__dirname, 'images', 'verification', 'guardian_verification.jpg');
