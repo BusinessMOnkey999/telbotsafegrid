@@ -72,6 +72,7 @@ try {
 
 // Add polling error handling
 // Add polling error handling with retry limit
+// Add polling error handling with retry limit
 const handlePollingError = (bot, botName) => {
   let retryCount = 0;
   const maxRetries = 5;
@@ -87,13 +88,13 @@ const handlePollingError = (bot, botName) => {
         process.exit(1);
       }
       retryCount++;
-      console.warn(`${botName} conflict detected. Retrying polling in 30 seconds (Attempt ${retryCount}/${maxRetries})...`);
+      console.warn(`${botName} conflict detected. Retrying polling in 60 seconds (Attempt ${retryCount}/${maxRetries})...`);
       setTimeout(() => {
         bot.stopPolling().then(() => {
           console.log(`${botName} stopped polling. Restarting...`);
           bot.startPolling();
         });
-      }, 30000);
+      }, 60000);
     }
   });
 };
