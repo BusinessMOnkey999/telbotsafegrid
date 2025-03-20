@@ -70,6 +70,28 @@ try {
   console.error('Failed to initialize nodemailer transporter:', error.message);
 }
 
+// Add polling error handling
+const handlePollingError = (bot, botName) => {
+  bot.on('polling_error', (error) => {
+    console.error(`${botName} polling error:`, error.message);
+    if (error.message.includes('401 Unauthorized')) {
+      console.error(`${botName} token is invalid or revoked. Please check the token in environment variables.`);
+    } else if (error.message.includes('409 Conflict')) {
+      console.warn(`${botName} conflict detected. Retrying polling in 5 seconds...`);
+      setTimeout(() => {
+        bot.stopPolling().then(() => {
+          console.log(`${botName} stopped polling. Restarting...`);
+          bot.startPolling();
+        });
+      }, 5000);
+    }
+  });
+};
+
+if (safeguardBot) handlePollingError(safeguardBot, 'Safeguard bot');
+if (delugeBot) handlePollingError(delugeBot, 'Deluge bot');
+if (guardianBot) handlePollingError(guardianBot, 'Guardian bot');
+
 function generateRandomString(length) {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
