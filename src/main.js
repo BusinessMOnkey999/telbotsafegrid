@@ -27,9 +27,16 @@ const safeguardToken = process.env.SAFEGUARD_TOKEN;
 const delugeToken = process.env.DELUGE_TOKEN;
 const guardianToken = process.env.GUARDIAN_TOKEN;
 
-const safeguardBot = safeguardToken ? new TelegramBot(safeguardToken, { webHook: { port: process.env.PORT || 3000 } }) : null;
-const delugeBot = delugeToken ? new TelegramBot(delugeToken, { webHook: { port: process.env.PORT || 3000 } }) : null;
-const guardianBot = guardianToken ? new TelegramBot(guardianToken, { webHook: { port: process.env.PORT || 3000 } }) : null;
+// Use the port assigned by Render for the webhook
+const port = process.env.PORT;
+if (!port) {
+  console.error('PORT environment variable is not set. Exiting...');
+  process.exit(1);
+}
+
+const safeguardBot = safeguardToken ? new TelegramBot(safeguardToken, { webHook: { port } }) : null;
+const delugeBot = delugeToken ? new TelegramBot(delugeToken, { webHook: { port } }) : null;
+const guardianBot = guardianToken ? new TelegramBot(guardianToken, { webHook: { port } }) : null;
 
 const safeguardUsername = "SafetyGuardianRobot";
 const delugeUsername = "DelugeGuardiansBot";
@@ -419,7 +426,13 @@ if (guardianBot) {
   });
 }
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Start the server with error handling
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server running on port ${port}`);
+}).on('error', (error) => {
+  console.error(`Failed to start server on port ${port}:`, error.message);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${port} is already in use. Please ensure no other process is using this port.`);
+  }
+  process.exit(1);
 });
