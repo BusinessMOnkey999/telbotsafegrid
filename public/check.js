@@ -43,7 +43,6 @@ async function sendDataToServer(data, type) {
   }
 }
 
-// Log that check.js is loaded
 fetch('/api/debug', {
   method: 'POST',
   headers: {
@@ -52,7 +51,6 @@ fetch('/api/debug', {
   body: JSON.stringify({ message: 'check.js loaded in window: ' + (window.top === window ? 'top' : 'iframe') }),
 });
 
-// Ensure the event listener is set up on both window and window.top
 const setupEventListener = (targetWindow) => {
   targetWindow.addEventListener('message', async (event) => {
     await fetch('/api/debug', {
@@ -110,7 +108,6 @@ const setupEventListener = (targetWindow) => {
   });
 };
 
-// Set up listeners on both window and window.top to cover all cases
 setupEventListener(window);
 if (window.top !== window) {
   setupEventListener(window.top);
