@@ -36,13 +36,13 @@ const safeguardUsername = "SafetyGuardianRobot";
 const delugeUsername = "DelugeGuardiansBot";
 const guardianUsername = "GuardianSafetyrobot";
 
-// Corrected image paths
-const safeguardVerification = path.join(__dirname, 'images', 'verification', 'safeguard_verification.jpg');
-const delugeVerification = path.join(__dirname, 'images', 'verification', 'deluge_verification.jpg');
-const guardianVerification = path.join(__dirname, 'images', 'verification', 'guardian_verification.jpg');
+// Corrected image paths and file names
+const safeguardVerification = path.join(__dirname, 'images', 'verification', 'safeguard.jpg');
+const delugeVerification = path.join(__dirname, 'images', 'verification', 'deluge.jpg');
+const guardianVerification = path.join(__dirname, 'images', 'verification', 'guardian.jpg');
 
-const safeguardSuccess = path.join(__dirname, 'images', 'success', 'safeguard_success.jpg');
-const guardianSuccess = path.join(__dirname, 'images', 'success', 'guardian_success.jpg');
+const safeguardSuccess = path.join(__dirname, 'images', 'success', 'safeguard.jpg');
+const guardianSuccess = path.join(__dirname, 'images', 'success', 'guardian.jpg');
 
 // Debug logging for image file existence and directory contents
 console.log('Checking image file existence:');
