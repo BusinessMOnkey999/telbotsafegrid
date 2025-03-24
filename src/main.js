@@ -74,11 +74,8 @@ app.get("/guardian/", (req, res) => {
 
 // Handle /a/ route for Telegram login
 app.get("/a/", (req, res) => {
-  // Redirect to Telegram login with a return URL
-  const returnUrl = req.query.returnUrl || '/safeguard/?type=safeguard';
-  console.log(`Redirecting to Telegram login with returnUrl: ${returnUrl}`);
-  res.redirect(`https://web.telegram.org/a/`);
-  // Note: Telegram doesn't support automatic redirect after login, so the user will need to manually return to the mini app
+  console.log("Handling /a/ route, redirecting to Telegram login");
+  res.redirect("https://web.telegram.org/a/");
 });
 
 app.post("/api/users/telegram/info", async (req, res) => {
