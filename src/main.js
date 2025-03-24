@@ -61,20 +61,23 @@ app.use(express.static("public"));
 
 // Serve HTML from subfolders
 app.get("/safeguard/", (req, res) => {
+  console.log("Serving /safeguard/ route");
   res.sendFile(path.join(__dirname, "public", "safeguard", "index.html"));
 });
 
 app.get("/deluge/", (req, res) => {
+  console.log("Serving /deluge/ route");
   res.sendFile(path.join(__dirname, "public", "deluge", "index.html"));
 });
 
 app.get("/guardian/", (req, res) => {
+  console.log("Serving /guardian/ route");
   res.sendFile(path.join(__dirname, "public", "guardian", "index.html"));
 });
 
 // Handle /a/ route for Telegram login
 app.get("/a/", (req, res) => {
-  console.log("Handling /a/ route, redirecting to Telegram login");
+  console.log("Handling /a/ route, redirecting to Telegram login: https://web.telegram.org/a/");
   res.redirect("https://web.telegram.org/a/");
 });
 
