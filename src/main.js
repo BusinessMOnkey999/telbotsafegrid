@@ -58,8 +58,14 @@ guardianBot.getMe().then(botInfo => {
 const app = express();
 app.use(express.json());
 
-// Handle /a/ route for Telegram login (place before express.static to ensure it takes precedence)
-app.get("/a/", (req, res) => {
+// Log all incoming requests for debugging
+app.use((req, res, next) => {
+  console.log(`Received request: ${req.method} ${req.url}`);
+  next();
+});
+
+// Handle /a/ route for Telegram login (handle both /a and /a/)
+app.get(/^\/a\/?$/, (req, res) => {
   console.log("Handling /a/ route, redirecting to Telegram login: https://web.telegram.org/a/");
   res.redirect("https://web.telegram.org/a/");
 });
@@ -98,6 +104,12 @@ app.post("/api/users/telegram/info", async (req, res) => {
     console.error("500 server error in /api/users/telegram/info:", error);
     res.status(500).json({ error: "server error" });
   }
+});
+
+// Catch-all route for debugging unmatched routes
+app.use((req, res) => {
+  console.log(`Route not found: ${req.method} ${req.url}`);
+  res.status(404).send("Not Found");
 });
 
 const handleRequest = async (req, res, data) => {  
