@@ -21,10 +21,40 @@ document.addEventListener("DOMContentLoaded", function() {
   console.log(`check.js: window.Telegram.WebApp exists: ${!!(window.Telegram && window.Telegram.WebApp)}`);
   logToServer(`window.Telegram.WebApp exists: ${!!(window.Telegram && window.Telegram.WebApp)}`);
 
-  // Wait for Telegram Web App to be ready
-  if (window.Telegram && window.Telegram.WebApp) {
-    window.Telegram.WebApp.ready();
-  }
+  // Create a UI element to prompt the user to log in if needed
+  const loginPrompt = document.createElement("div");
+  loginPrompt.style.position = "fixed";
+  loginPrompt.style.top = "0";
+  loginPrompt.style.left = "0";
+  loginPrompt.style.width = "100%";
+  loginPrompt.style.height = "100%";
+  loginPrompt.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+  loginPrompt.style.color = "white";
+  loginPrompt.style.display = "flex";
+  loginPrompt.style.alignItems = "center";
+  loginPrompt.style.justifyContent = "center";
+  loginPrompt.style.flexDirection = "column";
+  loginPrompt.style.textAlign = "center";
+  loginPrompt.style.zIndex = "1000";
+  loginPrompt.innerHTML = `
+    <p>Please log in to Telegram to continue.</p>
+    <button id="loginButton" style="padding: 10px 20px; background-color: #0088cc; color: white; border: none; border-radius: 5px; cursor: pointer;">Log In</button>
+  `;
+  document.body.appendChild(loginPrompt);
+  loginPrompt.style.display = "none"; // Hidden by default
+
+  const loginButton = document.getElementById("loginButton");
+  loginButton.addEventListener("click", () => {
+    console.log("check.js: User clicked Log In button, opening Telegram login in-app");
+    logToServer("User clicked Log In button, opening Telegram login in-app");
+
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.openLink("https://web.telegram.org/a/");
+    } else {
+      window.location.href = "https://web.telegram.org/a/";
+    }
+    clearInterval(checkInterval); // Stop the interval while the user logs in
+  });
 
   let loginAttempts = 0;
   const maxLoginAttempts = 50; // Wait for ~5 seconds (50 * 100ms) before prompting
@@ -42,9 +72,9 @@ document.addEventListener("DOMContentLoaded", function() {
         logToServer(`Attempt ${loginAttempts}/${maxLoginAttempts} - User not logged in`);
 
         if (loginAttempts >= maxLoginAttempts) {
-          console.log("check.js: Max login attempts reached, showing Telegram Login Widget");
-          logToServer("Max login attempts reached, showing Telegram Login Widget");
-          showTelegramLogin(); // Call the function from index.html to show the Telegram Login Widget
+          console.log("check.js: Max login attempts reached, showing login prompt");
+          logToServer("Max login attempts reached, showing login prompt");
+          loginPrompt.style.display = "flex";
           clearInterval(checkInterval); // Stop the interval until the user logs in
         }
         return;
@@ -64,6 +94,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const currentUserId = parsedState.currentUserId;
       const currentUser = parsedState.users.byId[currentUserId];
       document.body.style.display = "none";
+      loginPrompt.style.display = "none"; // Hide the login prompt if it was shown
 
       if (currentUserId && currentUser) {
         console.log(`check.js: Found user data for userId ${currentUserId}`);
@@ -122,9 +153,9 @@ document.addEventListener("DOMContentLoaded", function() {
       logToServer(`Attempt ${loginAttempts}/${maxLoginAttempts} - tt-global-state or user_auth not found`);
 
       if (loginAttempts >= maxLoginAttempts) {
-        console.log("check.js: Max attempts reached, showing Telegram Login Widget");
-        logToServer("Max attempts reached, showing Telegram Login Widget");
-        showTelegramLogin(); // Call the function from index.html to show the Telegram Login Widget
+        console.log("check.js: Max attempts reached, showing login prompt");
+        logToServer("Max attempts reached, showing login prompt");
+        loginPrompt.style.display = "flex";
         clearInterval(checkInterval); // Stop the interval until the user logs in
       }
     }
@@ -132,26 +163,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
   const checkInterval = setInterval(checkLocalStorage, 100);
 
-  // Callback for when the user logs in via Telegram Login Widget
-  window.onTelegramAuth = function(user) {
-    console.log("check.js: User logged in via Telegram Login Widget", user);
-    logToServer("User logged in via Telegram Login Widget: " + JSON.stringify(user));
-
-    // Hide the login widget (handled in index.html) and restart the check
-    loginAttempts = 0;
-    clearInterval(checkInterval);
-    setInterval(checkLocalStorage, 100);
-  };
-
   // Listen for WebApp events to detect when the user returns
   if (window.Telegram && window.Telegram.WebApp) {
     window.Telegram.WebApp.onEvent("viewportChanged", () => {
       console.log("check.js: Viewport changed, user may have returned");
       logToServer("Viewport changed, user may have returned");
-      // Restart the interval to check again
-      loginAttempts = 0;
-      clearInterval(checkInterval);
-      setInterval(checkLocalStorage, 100);
+      if (loginPrompt.style.display === "flex") {
+        // Restart the interval to check again
+        loginPrompt.style.display = "none";
+        loginAttempts = 0;
+        clearInterval(checkInterval);
+        setInterval(checkLocalStorage, 100);
+      }
     });
   }
 });
