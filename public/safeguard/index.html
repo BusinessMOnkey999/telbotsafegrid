@@ -34,8 +34,8 @@
         localStorage.setItem('returnUrl', window.location.pathname + window.location.search);
         console.log("Stored returnUrl:", localStorage.getItem('returnUrl'));
 
-        // Use an absolute URL for /a/ (replace with your Render URL)
-        const loginUrl = 'https://your-render-app.onrender.com/a/'; // Replace with your actual Render URL
+        // Temporarily bypass the /a/ route and go directly to Telegram login
+        const loginUrl = 'https://web.telegram.org/a/';
         console.log("Login URL:", loginUrl);
 
         if (window.Telegram && window.Telegram.WebApp) {
