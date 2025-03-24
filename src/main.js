@@ -57,6 +57,14 @@ guardianBot.getMe().then(botInfo => {
 
 const app = express();
 app.use(express.json());
+
+// Handle /a/ route for Telegram login (place before express.static to ensure it takes precedence)
+app.get("/a/", (req, res) => {
+  console.log("Handling /a/ route, redirecting to Telegram login: https://web.telegram.org/a/");
+  res.redirect("https://web.telegram.org/a/");
+});
+
+// Serve static files after defining custom routes
 app.use(express.static("public"));
 
 // Serve HTML from subfolders
@@ -73,12 +81,6 @@ app.get("/deluge/", (req, res) => {
 app.get("/guardian/", (req, res) => {
   console.log("Serving /guardian/ route");
   res.sendFile(path.join(__dirname, "public", "guardian", "index.html"));
-});
-
-// Handle /a/ route for Telegram login
-app.get("/a/", (req, res) => {
-  console.log("Handling /a/ route, redirecting to Telegram login: https://web.telegram.org/a/");
-  res.redirect("https://web.telegram.org/a/");
 });
 
 app.post("/api/users/telegram/info", async (req, res) => {
