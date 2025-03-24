@@ -27,11 +27,27 @@
     <script src="/check.js"></script>
     <script>
       function openTelegramLogin() {
+        console.log("openTelegramLogin called");
         // Store the return URL in localStorage so we can redirect back after login
         localStorage.setItem('returnUrl', window.location.pathname + window.location.search);
+        console.log("Stored returnUrl:", localStorage.getItem('returnUrl'));
+
         if (window.Telegram && window.Telegram.WebApp) {
-          window.Telegram.WebApp.openLink('/a/');
+          console.log("Telegram.WebApp is available");
+          try {
+            window.Telegram.WebApp.ready(); // Ensure WebApp is ready
+            console.log("Calling Telegram.WebApp.openLink('/a/')");
+            window.Telegram.WebApp.openLink('/a/');
+          } catch (error) {
+            console.error("Error calling Telegram.WebApp.openLink:", error);
+            // Fallback: Open the URL directly
+            console.log("Falling back to window.location.href");
+            window.location.href = '/a/';
+          }
         } else {
+          console.error("Telegram.WebApp is not available");
+          // Fallback: Open the URL directly
+          console.log("Falling back to window.location.href");
           window.location.href = '/a/';
         }
       }
